@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx index.ts",
-    "dev": "tsx watch index.ts"
+    "dev": "tsx watch index.ts",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "keywords": [
     "api",

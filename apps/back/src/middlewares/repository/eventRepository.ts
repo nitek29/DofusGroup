@@ -107,6 +107,7 @@ export class EventRepository {
 
       return event;
     } catch (error) {
+      console.error("Error creating event:", error);
       throw error;
     }
   }

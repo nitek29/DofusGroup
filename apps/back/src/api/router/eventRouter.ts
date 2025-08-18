@@ -32,16 +32,7 @@ export function createEventRouter(
     controller.getOneEnriched(req, res, next);
   });
 
-  router.post(
-    "/user/:userId/event",
-    validateUUID,
-    authService.checkPermission,
-    htmlSanitizer,
-    validateSchema(createEventSchema),
-    (req, res, next) => {
-      controller.post(req, res, next);
-    },
-  );
+  ;
 
   router.post(
     "/event/:eventId/addCharacters",
@@ -75,6 +66,27 @@ export function createEventRouter(
     .delete(validateUUID, authService.checkPermission, (req, res, next) => {
       controller.delete(req, res, next);
     });
+
+  router.post(
+    "/user/:userId/event",
+    validateUUID,
+    authService.checkPermission,
+    htmlSanitizer,
+    validateSchema(createEventSchema),
+    (req, res, next) => {
+      controller.post(req, res, next);
+    },
+  )
+
+  router.post(
+    "/events",
+    authService.setAuthUserRequest, // Middleware qui extrait l'userId du JWT
+    htmlSanitizer,
+    validateSchema(createEventSchema),
+    (req, res, next) => {
+      controller.createEvent(req, res, next);
+    },
+  );
 
   return router;
 }

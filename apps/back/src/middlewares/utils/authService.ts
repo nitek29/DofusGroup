@@ -10,12 +10,16 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export class AuthService {
-  private config = Config.getInstance();
+  private config: Config;
   private jwtSecret: string;
 
   constructor() {
-    const config = Config.getInstance();
-    this.jwtSecret = config.jwtSecret;
+    this.config = Config.getInstance();
+    this.jwtSecret = this.config.jwtSecret;
+    
+    if (!this.jwtSecret) {
+      throw new Error("JWT_SECRET is not configured");
+    }
   }
 
   public async setAuthUserRequest(
@@ -30,6 +34,11 @@ export class AuthService {
     }
 
     try {
+      // Vérification supplémentaire de sécurité
+      if (!this.config || !this.config.jwtSecret) {
+        throw new Error("JWT configuration is not available");
+      }
+
       const { value, error } = jwtSchema.validate(
         jwt.verify(token, this.config.jwtSecret),
       );

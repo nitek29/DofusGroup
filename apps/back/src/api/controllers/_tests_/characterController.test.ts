@@ -10,9 +10,10 @@ import {
 } from "../../../types/character.js";
 import { CharacterController } from "../characterController.js";
 import { CharacterRepository } from "../../../middlewares/repository/characterRepository.js";
+import { AuthenticatedRequest } from "../../../middlewares/utils/authService.js";
 
 describe("CharacterController", () => {
-  let req: Partial<Request>;
+  let req: Partial<Request | AuthenticatedRequest>;
   let res: Partial<Response>;
   let next = vi.fn();
 
@@ -51,6 +52,10 @@ describe("CharacterController", () => {
 
     it("Return characters if exist.", async () => {
       // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { userId: "436d798e-b084-454c-8f78-593e966a9a67" };
+      
       const mockCharacters: Character[] = [
         {
           id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
@@ -65,28 +70,46 @@ describe("CharacterController", () => {
 
       mockGetAll.mockResolvedValue(mockCharacters);
       // WHEN
-      await underTest.getAllByUserId(req as Request, res as Response, next);
+      await underTest.getAllByUserId(authReq, res as Response, next);
       //THEN
       expect(mockGetAll).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith(mockCharacters);
       expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
     });
 
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.getAllByUserId(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
     it("Return 404 if any character found.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { userId: "436d798e-b084-454c-8f78-593e966a9a67" };
+      
       const mockCharacters: Character[] = [];
 
       mockGetAll.mockResolvedValue(mockCharacters);
-      await underTest.getAllByUserId(req as Request, res as Response, next);
+      await underTest.getAllByUserId(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
       expect(res.json).toHaveBeenCalledWith({ error: "Any character found" });
     });
 
     it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { userId: "436d798e-b084-454c-8f78-593e966a9a67" };
+
       const error = new Error();
 
       mockGetAll.mockRejectedValue(error);
-      await underTest.getAllByUserId(req as Request, res as Response, next);
+      await underTest.getAllByUserId(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -100,6 +123,13 @@ describe("CharacterController", () => {
     };
 
     it("Return character if exists", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = {
+        userId: "436d798e-b084-454c-8f78-593e966a9a67",
+        characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+      };
+      
       const mockCharacter: Character = {
         id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
         name: "Night-Hunter",
@@ -111,24 +141,48 @@ describe("CharacterController", () => {
       };
 
       mockGetOne.mockResolvedValue(mockCharacter);
-      await underTest.getOneByUserId(req as Request, res as Response, next);
+      await underTest.getOneByUserId(authReq, res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(mockCharacter);
     });
 
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.getOneByUserId(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
     it("Call next() if character doesn't exists.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = {
+        userId: "436d798e-b084-454c-8f78-593e966a9a67",
+        characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+      };
+      
       mockGetOne.mockResolvedValue(null);
-      await underTest.getOneByUserId(req as Request, res as Response, next);
+      await underTest.getOneByUserId(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({ error: "Character not found" });
     });
 
     it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = {
+        userId: "436d798e-b084-454c-8f78-593e966a9a67",
+        characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+      };
+      
       const error = new Error();
 
       mockGetOne.mockRejectedValue(error);
-      await underTest.getOneByUserId(req as Request, res as Response, next);
+      await underTest.getOneByUserId(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -166,7 +220,7 @@ describe("CharacterController", () => {
       mockGetAllEnriched.mockResolvedValue(mockCharactersEnriched);
       // WHEN
       await underTest.getAllEnrichedByUserId(
-        req as Request,
+        req as AuthenticatedRequest,
         res as Response,
         next,
       );
@@ -176,12 +230,24 @@ describe("CharacterController", () => {
       expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
     });
 
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.getAllEnrichedByUserId(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
     it("Return 404 if any character found.", async () => {
       const mockCharactersEnriched: CharacterEnriched[] = [];
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a68";
 
       mockGetAllEnriched.mockResolvedValue(mockCharactersEnriched);
       await underTest.getAllEnrichedByUserId(
-        req as Request,
+        authReq,
         res as Response,
         next,
       );
@@ -195,7 +261,7 @@ describe("CharacterController", () => {
 
       mockGetAllEnriched.mockRejectedValue(error);
       await underTest.getAllEnrichedByUserId(
-        req as Request,
+        req as AuthenticatedRequest,
         res as Response,
         next,
       );
@@ -235,7 +301,7 @@ describe("CharacterController", () => {
 
       mockGetOneEnriched.mockResolvedValue(mockCharacterEnriched);
       await underTest.getOneEnrichedByUserId(
-        req as Request,
+        req as AuthenticatedRequest,
         res as Response,
         next,
       );
@@ -243,10 +309,24 @@ describe("CharacterController", () => {
       expect(res.json).toHaveBeenCalledWith(mockCharacterEnriched);
     });
 
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.getOneEnrichedByUserId(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
     it("Call next() if character doesn't exists.", async () => {
       mockGetOneEnriched.mockResolvedValue(null);
+      
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      
       await underTest.getOneEnrichedByUserId(
-        req as Request,
+        authReq,
         res as Response,
         next,
       );
@@ -259,8 +339,12 @@ describe("CharacterController", () => {
       const error = new Error();
 
       mockGetOneEnriched.mockRejectedValue(error);
+
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+
       await underTest.getOneEnrichedByUserId(
-        req as Request,
+        authReq,
         res as Response,
         next,
       );
@@ -268,194 +352,262 @@ describe("CharacterController", () => {
       expect(next).toHaveBeenCalledWith(error);
     });
   });
+  
 
-  // --- POST ---
-  describe("post", () => {
-    it("Return character if create.", async () => {
+  // --- CREATE CHARACTER (Authenticated) ---
+  describe("createCharacter", () => {
+    it("Return character if created with authenticated user.", async () => {
       // GIVEN
-      req.params = { userId: "436d798e-b084-454c-8f78-593e966a9a66" };
-      req.body = {
-        name: "Night-Hunter",
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.body = {
+        name: "TestChar",
         sex: "M",
-        level: 190,
+        level: 100,
         alignment: "Bonta",
-        stuff: "https://d-bk.net/fr/d/1EFhw",
-        default_character: true,
-        breed_id: "eb09dc14-37a4-417c-aaab-7416e5ffb0c2",
-        server_id: "f62cf8c1-0394-4255-ab6b-a2d255d1b923",
+        stuff: "https://d-bk.net/fr/d/test",
+        default_character: false,
+        breed_id: "123e4567-e89b-12d3-a456-426614174000",
+        server_id: "987fcdeb-51a2-43d1-9c45-987654321000",
       };
-      const mockDatas: CharacterBodyData = {
-        ...req.body,
-        user_id: req.params.userId,
+      const expectedCharacterData = {
+        ...authReq.body,
+        user_id: authReq.userId,
       };
       const mockNewCharacter: Character = {
         id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
-        name: "Night-Hunter",
+        name: "TestChar",
         sex: "M",
-        level: 190,
+        level: 100,
         alignment: "Bonta",
-        stuff: "https://d-bk.net/fr/d/1EFhw",
-        default_character: true,
-      };
-      const mockNewCharacterEnriched: CharacterEnriched = {
-        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
-        name: "Night-Hunter",
-        sex: "M",
-        level: 190,
-        alignment: "Bonta",
-        stuff: "https://d-bk.net/fr/d/1EFhw",
-        default_character: true,
-        user: {
-          id: "436d798e-b084-454c-8f78-593e966a9a66",
-          username: "Goldorak",
-        },
-        breed: { id: "9a252130-3af3-4e5c-a957-a04a6f23c59a", name: "Sram" },
-        server: {
-          id: "c3e35f15-d01a-439e-98ed-4a15ff39dae2",
-          name: "Dakal",
-          mono_account: true,
-        },
-        events: [],
+        stuff: "https://d-bk.net/fr/d/test",
+        default_character: false,
       };
 
       mockPost.mockResolvedValue(mockNewCharacter);
-      mockGetOneEnriched.mockResolvedValue(mockNewCharacterEnriched);
       // WHEN
-      await underTest.post(req as Request, res as Response, next);
+      await underTest.create(authReq, res as Response, next);
       //THEN
-      expect(mockPost).toHaveBeenCalledWith(mockDatas);
-      expect(res.json).toHaveBeenCalledWith(mockNewCharacterEnriched);
-      expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
-    });
-  });
-
-  // --- PATCH ---
-  describe("update", () => {
-    it("Return character if updated.", async () => {
-      // GIVEN
-      req.params = {
-        userId: "436d798e-b084-454c-8f78-593e966a9a66",
-        characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
-      };
-      req.body = {
-        level: 200,
-        alignment: "Brakmar",
-        default_character: false,
-      };
-      const mockDatas: CharacterBodyData = req.body;
-      const mockCharacterToUpdate: CharacterEnriched = {
-        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
-        name: "Night-Hunter",
-        sex: "M",
-        level: 190,
-        alignment: "Bonta",
-        stuff: "https://d-bk.net/fr/d/1EFhw",
-        default_character: true,
-        user: {
-          id: "436d798e-b084-454c-8f78-593e966a9a66",
-          username: "Goldorak",
-        },
-        breed: { id: "9a252130-3af3-4e5c-a957-a04a6f23c59a", name: "Sram" },
-        server: {
-          id: "c3e35f15-d01a-439e-98ed-4a15ff39dae2",
-          name: "Dakal",
-          mono_account: true,
-        },
-        events: [],
-      };
-      const mockUpdatedCharacter = { ...mockCharacterToUpdate, ...mockDatas };
-
-      mockUpdate.mockResolvedValue(mockUpdatedCharacter);
-      mockGetOneEnriched.mockResolvedValue(mockUpdatedCharacter);
-      // WHEN
-      await underTest.update(req as Request, res as Response, next);
-      //THEN
-      expect(mockUpdatedCharacter.level).toBe(200);
-      expect(mockUpdatedCharacter.alignment).toBe("Brakmar");
-      expect(mockUpdatedCharacter.default_character).toBe(false);
-      expect(mockUpdate).toHaveBeenCalledWith(
-        req.params.userId,
-        req.params.characterId,
-        mockDatas,
-      );
-      expect(res.json).toHaveBeenCalledWith(mockUpdatedCharacter);
-      expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
+      expect(mockPost).toHaveBeenCalledWith(expectedCharacterData);
+      expect(res.status).toHaveBeenCalledWith(status.CREATED);
+      expect(res.json).toHaveBeenCalledWith(mockNewCharacter);
     });
 
-    it("Return 400 if userId isn't define.", async () => {
-      req.params = {};
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
 
-      await underTest.update(req as Request, res as Response, next);
+      await underTest.create(authReq, res as Response, next);
 
-      expect(res.status).toHaveBeenCalledWith(status.BAD_REQUEST);
-      expect(res.json).toHaveBeenCalledWith({ error: "User ID is required" });
-    });
-
-    it("Call next() if character doesn't exists.", async () => {
-      req.params = {
-        userId: "436d798e-b084-454c-8f78-593e966a9a66",
-        characterId: "3aa64b38-e41c-44ae-94ea-3b75082fb8fb",
-      };
-      req.body = {
-        level: 200,
-        alignment: "Brakmar",
-        default_character: false,
-      };
-
-      mockUpdate.mockResolvedValue(null);
-      await underTest.update(req as Request, res as Response, next);
-
-      expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
-      expect(res.json).toHaveBeenCalledWith({ error: "Character not found" });
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
     });
 
     it("Call next() in case of error.", async () => {
-      req.params = {
-        userId: "436d798e-b084-454c-8f78-593e966a9a66",
-        characterId: "3aa64b38-e41c-44ae-94ea-3b75082fb8fb",
-      };
-      req.body = {
-        level: 200,
-        alignment: "Brakmar",
-        default_character: false,
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.body = {
+        name: "TestChar",
+        sex: "M",
+        level: 100,
       };
       const error = new Error();
 
-      mockUpdate.mockRejectedValue(error);
-      await underTest.update(req as Request, res as Response, next);
+      mockPost.mockRejectedValue(error);
+      await underTest.create(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });
   });
 
-  // --- DELETE ---
-  describe("delete", () => {
-    req.params = { userId: "436d798e-b084-454c-8f78-593e966a9a66" };
-
-    it("Return 204 if character is delete.", async () => {
+  // --- UPDATE (Authenticated) ---
+  describe("update (Authenticated)", () => {
+    it("Return character if updated with authenticated user.", async () => {
       // GIVEN
-      mockDelete.mockResolvedValue(true);
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
+      authReq.body = {
+        level: 200,
+        alignment: "Brakmar",
+        default_character: false,
+      };
+      const mockUpdatedCharacter: Character = {
+        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+        name: "Night-Hunter",
+        sex: "M",
+        level: 200,
+        alignment: "Brakmar",
+        stuff: "https://d-bk.net/fr/d/1EFhw",
+        default_character: false,
+      };
+
+      mockUpdate.mockResolvedValue(mockUpdatedCharacter);
       // WHEN
-      await underTest.delete(req as Request, res as Response, next);
+      await underTest.update(authReq, res as Response, next);
       //THEN
-      expect(mockDelete).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
-      expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        authReq.userId,
+        authReq.params.characterId,
+        authReq.body,
+      );
+      expect(res.json).toHaveBeenCalledWith(mockUpdatedCharacter);
     });
 
-    it("Call next() if character doesn't exists.", async () => {
-      mockDelete.mockResolvedValue(false);
-      await underTest.delete(req as Request, res as Response, next);
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.update(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
+    it("Return 404 if character not found.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "non-existent-id" };
+      authReq.body = {
+        level: 200,
+      };
+
+      mockUpdate.mockResolvedValue(null);
+      await underTest.update(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({ error: "Character not found" });
     });
 
     it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
+      authReq.body = {
+        level: 200,
+      };
+      const error = new Error();
+
+      mockUpdate.mockRejectedValue(error);
+      await underTest.update(authReq, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
+
+  // --- DELETE (Authenticated) ---
+  describe("delete (Authenticated)", () => {
+    it("Return 204 if character is deleted with authenticated user.", async () => {
+      // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
+
+      mockDelete.mockResolvedValue(true);
+      // WHEN
+      await underTest.delete(authReq, res as Response, next);
+      //THEN
+      expect(mockDelete).toHaveBeenCalledWith(
+        authReq.userId,
+        authReq.params.characterId,
+      );
+      expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
+    });
+
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.delete(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
+    it("Return 404 if character not found.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "non-existent-id" };
+
+      mockDelete.mockResolvedValue(false);
+      await underTest.delete(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({ error: "Character not found" });
+    });
+
+    it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
       const error = new Error();
 
       mockDelete.mockRejectedValue(error);
-      await underTest.delete(req as Request, res as Response, next);
+      await underTest.delete(authReq, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
+
+  // --- GET USER CHARACTERS (Authenticated) ---
+  describe("getUserCharacters", () => {
+    it("Return characters if exist.", async () => {
+      // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      
+      const mockCharacters: Character[] = [
+        {
+          id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+          name: "Night-Hunter",
+          sex: "M",
+          level: 190,
+          alignment: "Bonta",
+          stuff: "https://d-bk.net/fr/d/1EFhw",
+          default_character: true,
+        },
+      ];
+
+      mockGetAll.mockResolvedValue(mockCharacters);
+      // WHEN
+      await underTest.getUserCharacters(authReq, res as Response, next);
+      //THEN
+      expect(mockGetAll).toHaveBeenCalledWith(authReq.userId);
+      expect(res.json).toHaveBeenCalledWith(mockCharacters);
+      expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
+    });
+
+    it("Return 403 if user is not authenticated.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+
+      await underTest.getUserCharacters(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
+    });
+
+    it("Return 204 if no characters found.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      
+      const mockCharacters: Character[] = [];
+
+      mockGetAll.mockResolvedValue(mockCharacters);
+      await underTest.getUserCharacters(authReq, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
+      expect(res.json).toHaveBeenCalledWith({ error: "Any character found" });
+    });
+
+    it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
+      
+      const error = new Error();
+
+      mockGetAll.mockRejectedValue(error);
+      await underTest.getUserCharacters(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });

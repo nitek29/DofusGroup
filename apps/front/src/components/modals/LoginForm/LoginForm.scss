@@ -1,4 +1,4 @@
-.register_modal {
+.login_modal {
   width: 100%;
 
   &_title {
@@ -48,7 +48,7 @@
         border-radius: 0.5rem;
         font-size: 1rem;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        background-color: #ffffff;
+        background-color: var(--input-bg, white);
         color: #333333;
 
         @media (max-width: 480px) {

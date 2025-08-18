@@ -40,6 +40,14 @@ export function createAuthRouter(
   router.post("/auth/logout", (req, res, next) => {
     controller.logout(req, res, next);
   });
+  
+  router.get(
+    "/auth/me",
+    authService.setAuthUserRequest,
+    (req, res, next) => {
+      controller.getMe(req, res, next);
+    },
+  );
 
   router.get(
     "/auth/:userId/account",

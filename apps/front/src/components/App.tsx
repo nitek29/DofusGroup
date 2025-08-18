@@ -6,6 +6,8 @@ import Header from "./Header/Header";
 import ModalsManager from "./modals/ModalsManager";
 import Home from "../pages/Home/Home";
 import Footer from "./Footer/Footer";
+import Events from "../pages/Events/Events";
+import Profile from "../pages/Profile/Profile";
 
 export default function App() {
   return (
@@ -14,6 +16,8 @@ export default function App() {
       <ModalsManager />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
       <Footer />
     </div>

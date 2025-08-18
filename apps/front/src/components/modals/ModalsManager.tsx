@@ -1,19 +1,70 @@
 import "./ModalsManager.scss";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
 
 import { useModal } from "../../contexts/modalContext";
 import RegisterForm from "./RegisterForm/RegisterForm";
+import LoginForm from "./LoginForm/LoginForm";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import EventForm from "./EventForm/EventForm";
+import CharacterForm from "./CharacterForm/CharacterForm";
+import UpdateUserForm from "./UpdateUserForm/UpdateUserForm";
+import { Tag } from "../../types/tag";
+import { Server } from "../../types/server";
+import { Breed } from "../../types/breed";
+import { User } from "../../types/user";
+import { Config } from "../../config/config";
+import { ApiClient } from "../../services/client";
+import { useAuth } from "../../contexts/authContext";
 
 export default function ModalsManager() {
   const { isOpen, modalType, error, handleSubmit, closeModal } = useModal();
+  const { user } = useAuth();
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
+  const [breeds, setBreeds] = useState<Breed[]>([]);
+
+  const config = Config.getInstance();
+  const axios = new ApiClient(config.baseUrl);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (modalType === "createEvent") {
+        try {
+          // Récupérer les tags et serveurs
+          const [tagsResponse, serversResponse] = await Promise.all([
+            axios.instance.get<Tag[]>("/tags"),
+            axios.instance.get<Server[]>("/servers"),
+          ]);
+          setTags(tagsResponse.data);
+          setServers(serversResponse.data);
+        } catch (error) {
+          console.error("Erreur lors du chargement des données:", error);
+        }
+      } else if (modalType === "createCharacter") {
+        try {
+          // Récupérer les breeds et serveurs
+          const [breedsResponse, serversResponse] = await Promise.all([
+            axios.instance.get<Breed[]>("/breeds"),
+            axios.instance.get<Server[]>("/servers"),
+          ]);
+          setBreeds(breedsResponse.data);
+          setServers(serversResponse.data);
+        } catch (error) {
+          console.error("Erreur lors du chargement des données:", error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [modalType]);
 
   if (!isOpen) return null;
 
   return (
     <div className="modal" onClick={closeModal}>
-      <div className="modal_content" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal_content ${modalType === "createEvent" || modalType === "createCharacter" ? "large" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           aria-label="Close modal"
@@ -28,6 +79,35 @@ export default function ModalsManager() {
             <RegisterForm
               handleSubmit={(event) => handleSubmit(event)}
               error={error}
+            />
+          )}
+          {modalType === "login" && (
+            <LoginForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+            />
+          )}
+          {modalType === "createEvent" && (
+            <EventForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+              tags={tags}
+              servers={servers}
+            />
+          )}
+          {modalType === "createCharacter" && (
+            <CharacterForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+              breeds={breeds}
+              servers={servers}
+            />
+          )}
+          {modalType === "updateUser" && (
+            <UpdateUserForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+              user={user || undefined}
             />
           )}
         </div>

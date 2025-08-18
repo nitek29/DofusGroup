@@ -4,7 +4,10 @@ export class ApiClient {
   private axiosInstance: AxiosInstance;
 
   constructor(baseURL: string) {
-    this.axiosInstance = axios.create({ baseURL });
+    this.axiosInstance = axios.create({ 
+      baseURL,
+      withCredentials: true, // Pour envoyer les cookies
+    });
   }
 
   get instance() {

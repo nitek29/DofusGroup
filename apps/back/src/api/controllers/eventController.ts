@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 
 import { Event, EventBodyData, EventEnriched } from "../../types/event.js";
 import { EventRepository } from "../../middlewares/repository/eventRepository.js";
+import { AuthenticatedRequest } from "../../middlewares/utils/authService.js";
 
 export class EventController {
   private repository: EventRepository;
@@ -253,6 +254,35 @@ export class EventController {
       }
 
       res.status(status.NO_CONTENT).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async createEvent(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      // Vérifier que l'utilisateur est authentifié
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+
+      // L'userId vient du JWT via le middleware d'authentification
+      const userId = req.userId;
+      const eventData: EventBodyData = {
+        ...req.body,
+        user_id: userId, // Assigné automatiquement depuis le JWT
+      };
+
+      const newEvent: EventEnriched = await this.repository.post(eventData);
+      const newEventEnriched: EventEnriched | null = await this.repository.getOneEnriched(
+        newEvent.id,
+      );
+      res.status(status.CREATED).json(newEventEnriched);
     } catch (error) {
       next(error);
     }

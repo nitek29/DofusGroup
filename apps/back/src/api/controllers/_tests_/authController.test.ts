@@ -282,6 +282,93 @@ describe("AuthController", () => {
     });
   });
 
+    // --- GET ME ---
+  describe("getMe", () => {
+    it("Return user if authenticated", async () => {
+      const req: Partial<AuthenticatedRequest> = {
+        userId: "3521dd0c-c303-4239-a545-10e5476abe2a",
+      };
+
+      const mockUser: AuthUser = {
+        id: "3521dd0c-c303-4239-a545-10e5476abe2a",
+        username: "user1",
+        password: "hashedpass",
+        mail: "user1@example.com",
+      };
+
+      (authUserSchema.validate as Mock).mockReturnValue({
+        value: { userId: "3521dd0c-c303-4239-a545-10e5476abe2a" },
+        error: undefined,
+      });
+      mockFindById.mockResolvedValue(mockUser);
+
+      await underTest.getAccount(
+        req as AuthenticatedRequest,
+        res as Response,
+        next,
+      );
+
+      expect(mockFindById).toHaveBeenCalledWith(
+        "3521dd0c-c303-4239-a545-10e5476abe2a",
+      );
+      expect(res.json).toHaveBeenCalledWith(mockUser);
+      expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
+    });
+
+    it("Return 400 if unauthenticated", async () => {
+      const req: Partial<AuthenticatedRequest> = { userId: undefined };
+
+      (authUserSchema.validate as Mock).mockReturnValue({
+        value: undefined ,
+        error: {
+          details: [
+            {
+              message: "Not authenticated",
+            },
+          ],
+        },
+      });
+
+      await underTest.getMe(
+        req as AuthenticatedRequest,
+        res as Response,
+        next,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(status.UNAUTHORIZED);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Not authenticated",
+      });
+      expect(mockFindById).not.toHaveBeenCalled();
+    });
+
+    it("Return 404 if user not found", async () => {
+      const req: Partial<AuthenticatedRequest> = {
+        userId: "3521dd0c-c303-4239-a545-10e5476abe2a",
+      };
+
+      (authUserSchema.validate as Mock).mockReturnValue({
+        value: { userId: "3521dd0c-c303-4239-a545-10e5476abe2a" },
+        error: undefined,
+      });
+      mockFindById.mockResolvedValue(null);
+
+      await underTest.getMe(
+        req as AuthenticatedRequest,
+        res as Response,
+        next,
+      );
+
+      expect(mockFindById).toHaveBeenCalledWith(
+        "3521dd0c-c303-4239-a545-10e5476abe2a",
+      );
+      expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "User not found",
+      });
+    });
+  });
+
   // --- LOGOUT ---
   describe("logout", () => {
     it("Return empty cookie", () => {

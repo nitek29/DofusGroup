@@ -71,7 +71,7 @@ export default function RegisterForm({
         </button>
       </form>
 
-      {error && <p>{error}</p>}
+      {error && <p className="register_modal_error">{error}</p>}
     </div>
   );
 }
