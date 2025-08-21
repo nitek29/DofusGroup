@@ -17,7 +17,7 @@ export function createCharacterRouter(
   const router: Router = Router();
 
   router.get("/user/:userId/characters", 
-    authService.setAuthUserRequest, 
+    authService.setAuthUserRequest.bind(authService), 
     validateUUID, 
     (req, res, next) => {
     controller.getAllByUserId(req, res, next);
@@ -25,7 +25,7 @@ export function createCharacterRouter(
 
   router.get(
     "/user/:userId/characters/enriched", 
-    authService.setAuthUserRequest,
+    authService.setAuthUserRequest.bind(authService),
     validateUUID,
     (req, res, next) => {
       controller.getAllEnrichedByUserId(req, res, next);
@@ -34,7 +34,7 @@ export function createCharacterRouter(
 
   router
     .route("/user/:userId/character/:characterId")
-    .get(authService.setAuthUserRequest, 
+    .get(authService.setAuthUserRequest.bind(authService), 
       validateUUID, 
       (req, res, next) => {
       controller.getOneByUserId(req, res, next);
@@ -42,7 +42,7 @@ export function createCharacterRouter(
 
   router.get(
     "/user/:userId/character/:characterId/enriched",
-    authService.setAuthUserRequest,
+    authService.setAuthUserRequest.bind(authService),
     validateUUID,
     (req, res, next) => {
       controller.getOneEnrichedByUserId(req, res, next);
@@ -51,7 +51,7 @@ export function createCharacterRouter(
 
   router.get(
     "/characters",
-    authService.setAuthUserRequest,
+    authService.setAuthUserRequest.bind(authService),
     (req, res, next) => {
       controller.getUserCharacters(req, res, next);
     },
@@ -59,7 +59,7 @@ export function createCharacterRouter(
 
   router.post(
     "/characters",
-    authService.setAuthUserRequest,
+    authService.setAuthUserRequest.bind(authService),
     htmlSanitizer,
     validateSchema(createCharacterSchema),
     (req, res, next) => {
@@ -71,7 +71,7 @@ export function createCharacterRouter(
     .route("/character/:characterId")
     .patch(
       validateUUID,
-      authService.setAuthUserRequest,
+      authService.setAuthUserRequest.bind(authService),
       htmlSanitizer,
       validateSchema(updateCharacterSchema),
       (req, res, next) => {
@@ -80,7 +80,7 @@ export function createCharacterRouter(
     )
     .delete(
       validateUUID,
-      authService.setAuthUserRequest,
+      authService.setAuthUserRequest.bind(authService),
       (req, res, next) => {
         controller.delete(req, res, next);
       },

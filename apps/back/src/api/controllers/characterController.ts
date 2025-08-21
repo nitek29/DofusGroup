@@ -16,6 +16,66 @@ export class CharacterController {
     this.repository = repository;
   }
 
+  // Méthode privée pour éviter la duplication de code
+  private async updateCharacterLogic(
+    characterId: string,
+    characterData: Partial<CharacterBodyData>,
+    checkOwnership: boolean = true,
+  ): Promise<{ success: boolean; character?: Character; error?: string; statusCode?: number}>{
+    try {
+      // Vérifier que le personnage existe
+      const existingCharacter = await this.repository.getOneEnriched(characterId);
+      if (!existingCharacter) {
+        return { success: false, error: "Character not found", statusCode: status.NOT_FOUND };
+      }
+
+      // Vérifier les droits d'accès
+      if (checkOwnership && existingCharacter.user?.id !== characterData.user_id) {
+        return { success: false, error: "Forbidden access", statusCode: status.FORBIDDEN };
+      }
+
+      // Mettre à jour le personnage
+      const updatedCharacter = await this.repository.update(characterId, characterData);
+      if (!updatedCharacter) {
+        return { success: false, error: "Character not found", statusCode: status.NOT_FOUND };
+      }
+
+      return { success: true, character: updatedCharacter };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+
+  // Méthode privée pour la suppression
+  private async deleteCharacterLogic(
+      characterId: string,
+      checkOwnership: boolean = true,
+      userId?: string
+    ): Promise<{ success: boolean; error?: string; statusCode?: number }> {
+      try {
+        // Vérifier que le personnage existe
+        const existingCharacter = await this.repository.getOneEnriched(characterId);
+        if (!existingCharacter) {
+          return { success: false, error: "Character not found", statusCode: status.NOT_FOUND };
+        }
+  
+        // Vérifier la propriété si nécessaire
+        if (checkOwnership && userId && existingCharacter.user?.id !== userId) {
+          return { success: false, error: "Forbidden access", statusCode: status.FORBIDDEN };
+        }
+
+        const result = await this.repository.delete(userId || existingCharacter.user?.id || "", characterId);
+        if (!result) {
+          return { success: false, error: "Event not found", statusCode: status.NOT_FOUND };
+        }
+  
+        return { success: true };
+      } catch (error) {
+        throw error;
+      }
+    }
+
   public async getAllByUserId(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     const userId: string = req.params.userId;
 
@@ -258,17 +318,28 @@ export class CharacterController {
         return;
       }
 
-      const { characterId } = req.params;
-      const updateData: Partial<CharacterBodyData> = req.body;
-
-      const updatedCharacter: Character | null = await this.repository.update(req.userId, characterId, updateData);
-
-      if (!updatedCharacter) {
-        res.status(status.NOT_FOUND).json({ error: "Character not found" });
+      if (!req.params.characterId) {
+        res.status(status.BAD_REQUEST).json({ error: "Character ID is required" });
         return;
       }
 
-      res.json(updatedCharacter);
+      const { characterId } = req.params;
+      const updateData: Partial<CharacterBodyData> = req.body;
+      updateData.user_id = req.userId;
+
+      // Utiliser la logique refactorisée avec vérification de propriété
+      const result = await this.updateCharacterLogic(characterId, updateData, true);
+
+      if (!result.success) {
+        res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+        return;
+      }
+
+      const updatedCharacterEnriched = await this.repository.getOneEnriched(
+        result.character!.id
+      );
+
+      res.json(updatedCharacterEnriched);
     } catch (error) {
       next(error);
     }
@@ -285,18 +356,90 @@ export class CharacterController {
         return;
       }
 
+      if (!req.params.characterId) {
+              res.status(status.BAD_REQUEST).json({ error: "Character ID is required" });
+              return;
+            }
+
       const { characterId } = req.params;
 
-      const result: boolean = await this.repository.delete(req.userId, characterId);
+      // Utiliser la logique refactorisée avec vérification de propriété
+      const result = await this.deleteCharacterLogic(characterId, true, req.userId);
 
-      if (!result) {
-        res.status(status.NOT_FOUND).json({ error: "Character not found" });
-        return;
-      }
+       if (!result.success) {
+              res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+              return;
+            }
 
       res.status(status.NO_CONTENT).end();
     } catch (error) {
       next(error);
     }
   }
+
+  // Méthodes pour les admins
+  public async adminUpdateCharacter(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+
+      if (!req.params.characterId) {
+        res.status(status.BAD_REQUEST).json({ error: "Character ID is required" });
+        return;
+      }
+
+      const { characterId } = req.params;
+      const updateData: Partial<CharacterBodyData> = req.body;
+
+      const updatedCharacter: Character | null = await this.repository.update(characterId, updateData);
+
+      if (!updatedCharacter) {
+        res.status(status.NOT_FOUND).json({ error: "Character not found" });
+        return;
+      }
+
+      res.json(updatedCharacter);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async adminDeleteCharacter(
+      req: AuthenticatedRequest,
+      res: Response,
+      next: NextFunction,
+    ) {
+      try {
+        if (!req.userId) {
+          res.status(status.UNAUTHORIZED).json({ error: "Unauthorized access" });
+          return;
+        }
+  
+        if (!req.params.characterId) {
+          res.status(status.BAD_REQUEST).json({ error: "Character ID is required" });
+          return;
+        }
+  
+        const characterId = req.params.characterId;
+  
+        // Les admins peuvent supprimer n'importe quel personnage (checkOwnership = false)
+        const result = await this.deleteCharacterLogic(characterId, false, req.userId);
+  
+        if (!result.success) {
+          res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+          return;
+        }
+  
+        res.status(status.NO_CONTENT).end();
+      } catch (error) {
+        next(error);
+      }
+    }
+
 }

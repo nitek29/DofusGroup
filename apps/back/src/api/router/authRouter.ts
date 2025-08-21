@@ -43,7 +43,7 @@ export function createAuthRouter(
   
   router.get(
     "/auth/me",
-    authService.setAuthUserRequest,
+    authService.setAuthUserRequest.bind(authService),
     (req, res, next) => {
       controller.getMe(req, res, next);
     },

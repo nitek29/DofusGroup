@@ -9,6 +9,7 @@ User account:
     -  Password
     -  Mail adress
     -  Avatar
+    -  Role
 
 User character:
 

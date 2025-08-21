@@ -1,6 +1,7 @@
 import { Tag } from "./tag";
 import { Server } from "./server";
 import { Character } from "./character";
+import { User } from "./user";
 
 export type Event = {
   id: string;
@@ -13,9 +14,17 @@ export type Event = {
   description?: string;
   max_players: number;
   status: string;
+  tag?: Tag;
+  server?: Server;
+  characters?: Character[];
+  user?: User;
+};
+
+export type EventEnriched = Event & {
   tag: Tag;
   server: Server;
   characters: Character[];
+  user: User;
 };
 
 export type PaginatedEvents = {

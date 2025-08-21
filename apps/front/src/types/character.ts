@@ -1,3 +1,5 @@
+import { Breed } from "./breed";
+
 export type Character = {
   id: string;
   name: string;
@@ -5,5 +7,6 @@ export type Character = {
   level: number;
   alignment: string;
   stuff: string;
+  breed: Breed;
   default_character: boolean;
 };

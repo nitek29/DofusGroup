@@ -40,8 +40,8 @@ export class CharacterService {
   }
 
 
-  public async getUserCharacters(userId: string): Promise<Character[]> {
-    const response = await this.axios.get<Character[]>(`/user/characters`);
+  public async getUserCharacters(): Promise<Character[]> {
+    const response = await this.axios.get<Character[]>(`/characters`);
     return response.data;
   }
 

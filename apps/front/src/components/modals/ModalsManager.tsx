@@ -13,16 +13,18 @@ import UpdateUserForm from "./UpdateUserForm/UpdateUserForm";
 import { Tag } from "../../types/tag";
 import { Server } from "../../types/server";
 import { Breed } from "../../types/breed";
+import { Character } from "../../types/character";
 import { User } from "../../types/user";
 import { Config } from "../../config/config";
 import { ApiClient } from "../../services/client";
 import { useAuth } from "../../contexts/authContext";
 
 export default function ModalsManager() {
-  const { isOpen, modalType, error, handleSubmit, closeModal } = useModal();
+  const { isOpen, modalType, error, handleSubmit, closeModal, modalData } = useModal();
   const { user } = useAuth();
   const [tags, setTags] = useState<Tag[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [breeds, setBreeds] = useState<Breed[]>([]);
 
   const config = Config.getInstance();
@@ -30,15 +32,17 @@ export default function ModalsManager() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (modalType === "createEvent") {
+      if (modalType === "createEvent" || modalType === "editEvent") {
         try {
           // Récupérer les tags et serveurs
-          const [tagsResponse, serversResponse] = await Promise.all([
+          const [tagsResponse, serversResponse, charactersResponse] = await Promise.all([
             axios.instance.get<Tag[]>("/tags"),
             axios.instance.get<Server[]>("/servers"),
+            axios.instance.get<Character[]>("/characters"),
           ]);
           setTags(tagsResponse.data);
           setServers(serversResponse.data);
+          setCharacters(charactersResponse.data);
         } catch (error) {
           console.error("Erreur lors du chargement des données:", error);
         }
@@ -64,7 +68,7 @@ export default function ModalsManager() {
 
   return (
     <div className="modal" onClick={closeModal}>
-      <div className={`modal_content ${modalType === "createEvent" || modalType === "createCharacter" ? "large" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`modal_content ${modalType === "createEvent" || modalType === "editEvent" || modalType === "createCharacter" ? "large" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           aria-label="Close modal"
@@ -93,6 +97,18 @@ export default function ModalsManager() {
               error={error}
               tags={tags}
               servers={servers}
+              characters={characters}
+            />
+          )}
+          {modalType === "editEvent" && (
+            <EventForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+              tags={tags}
+              servers={servers}
+              characters={characters}
+              eventToEdit={modalData}
+              isEditing={true}
             />
           )}
           {modalType === "createCharacter" && (

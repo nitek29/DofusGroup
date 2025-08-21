@@ -80,6 +80,7 @@ describe("AuthController", () => {
       const mockNewUser: AuthUser = {
         id: "07a3cd78-3a4a-4aae-a681-7634d72197c2",
         username: "toto",
+        role: "user",
         password:
           "$argon2id$v=19$m=65536,t=3,p=4$PBffc9eGthziVC938nRg+Q$8dpZXWhHPGfBj0tEp/vwSpfsm2pZK1dYRb8OSObg4gE",
         mail: "b4abae35a472f9eaffc89dbc:c5658303f02fa2ea7f7d6a0650af502e:9dcdd7b46a2907c4635293da74621854",
@@ -201,6 +202,7 @@ describe("AuthController", () => {
         username: "user1",
         password: "hashedpass",
         mail: "user1@example.com",
+        role: "user",
       };
 
       (authUserSchema.validate as Mock).mockReturnValue({
@@ -372,7 +374,7 @@ describe("AuthController", () => {
   // --- LOGOUT ---
   describe("logout", () => {
     it("Return empty cookie", () => {
-      underTest.logout(req as Request, res as Response);
+      underTest.logout(req as AuthenticatedRequest, res as Response, next);
 
       expect(res.clearCookie).toHaveBeenCalledWith("token", {
         httpOnly: true,

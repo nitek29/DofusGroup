@@ -12,6 +12,64 @@ export class EventController {
     this.repository = repository;
   }
 
+  // Méthode privée pour éviter la duplication de code
+  private async updateEventLogic(
+    eventId: string,
+    eventData: Partial<EventBodyData>,
+    checkOwnership: boolean = true,
+  ): Promise<{ success: boolean; event?: Event; error?: string; statusCode?: number }> {
+    try {
+      // Vérifier que l'événement existe
+      const existingEvent = await this.repository.getOneEnriched(eventId);
+      if (!existingEvent) {
+        return { success: false, error: "Event not found", statusCode: status.NOT_FOUND };
+      }
+
+      // Vérifier la propriété si nécessaire
+      if (checkOwnership && eventData.user_id && existingEvent.user?.id !== eventData.user_id) {
+        return { success: false, error: "Forbidden access", statusCode: status.FORBIDDEN };
+      }
+
+      const eventUpdated = await this.repository.update(eventId, eventData);
+      if (!eventUpdated) {
+        return { success: false, error: "Event not found", statusCode: status.NOT_FOUND };
+      }
+
+      return { success: true, event: eventUpdated };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Méthode privée pour la suppression
+  private async deleteEventLogic(
+    eventId: string,
+    checkOwnership: boolean = true,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string; statusCode?: number }> {
+    try {
+      // Vérifier que l'événement existe
+      const existingEvent = await this.repository.getOneEnriched(eventId);
+      if (!existingEvent) {
+        return { success: false, error: "Event not found", statusCode: status.NOT_FOUND };
+      }
+
+      // Vérifier la propriété si nécessaire
+      if (checkOwnership && userId && existingEvent.user?.id !== userId) {
+        return { success: false, error: "Forbidden access", statusCode: status.FORBIDDEN };
+      }
+
+      const result = await this.repository.delete(userId || existingEvent.user?.id || "", eventId);
+      if (!result) {
+        return { success: false, error: "Event not found", statusCode: status.NOT_FOUND };
+      }
+
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   public async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const limitParam = parseInt(req.query.limit as string, 10);
@@ -207,49 +265,56 @@ export class EventController {
     }
   }
 
-  public async update(req: Request, res: Response, next: NextFunction) {
+  public async update(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      if (!req.params.userId) {
-        res.status(status.BAD_REQUEST).json({ error: "User ID is required" });
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
         return;
       }
 
-      const eventId: string = req.params.eventId;
-      const eventData: Partial<EventBodyData> = req.body;
-
-      const eventUpdated: Event | null = await this.repository.update(
-        eventId,
-        eventData,
-      );
-
-      if (!eventUpdated) {
-        res.status(status.NOT_FOUND).json({ error: "Event not found" });
-        return;
-      }
-
-      const eventUpdatedEnriched = await this.repository.getOneEnriched(
-        eventUpdated.id,
-      );
-
-      res.json(eventUpdated);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  public async delete(req: Request, res: Response, next: NextFunction) {
-    try {
       if (!req.params.eventId) {
         res.status(status.BAD_REQUEST).json({ error: "Event ID is required" });
         return;
       }
 
-      const { userId, eventId } = req.params;
+      const eventId = req.params.eventId;
+      const eventData: Partial<EventBodyData> = req.body;
+      eventData.user_id = req.userId;
 
-      const result: boolean = await this.repository.delete(userId, eventId);
+      // Utiliser la logique refactorisée avec vérification de propriété
+      const result = await this.updateEventLogic(eventId, eventData, true);
 
-      if (!result) {
-        res.status(status.NOT_FOUND).json({ error: "Event not found" });
+      if (!result.success) {
+        res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+        return;
+      }
+
+      const eventUpdatedEnriched = await this.repository.getOneEnriched(result.event!.id);
+      res.json(eventUpdatedEnriched);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async delete(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+
+      if (!req.params.eventId) {
+        res.status(status.BAD_REQUEST).json({ error: "Event ID is required" });
+        return;
+      }
+
+      const eventId = req.params.eventId;
+
+      // Utiliser la logique refactorisée avec vérification de propriété
+      const result = await this.deleteEventLogic(eventId, true, req.userId);
+
+      if (!result.success) {
+        res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
         return;
       }
 
@@ -283,6 +348,74 @@ export class EventController {
         newEvent.id,
       );
       res.status(status.CREATED).json(newEventEnriched);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Méthodes pour les admins
+  public async adminUpdateEvent(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      if (!req.userId) {
+        res.status(status.UNAUTHORIZED).json({ error: "Unauthorized access" });
+        return;
+      }
+
+      if (!req.params.eventId) {
+        res.status(status.BAD_REQUEST).json({ error: "Event ID is required" });
+        return;
+      }
+
+      const eventId = req.params.eventId;
+      const eventData: Partial<EventBodyData> = req.body;
+      eventData.user_id = req.userId;
+
+      // Les admins peuvent modifier n'importe quel événement (checkOwnership = false)
+      const result = await this.updateEventLogic(eventId, eventData, false);
+
+      if (!result.success) {
+        res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+        return;
+      }
+
+      const eventUpdatedEnriched = await this.repository.getOneEnriched(result.event!.id);
+      res.json(eventUpdatedEnriched);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async adminDeleteEvent(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      if (!req.userId) {
+        res.status(status.UNAUTHORIZED).json({ error: "Unauthorized access" });
+        return;
+      }
+
+      if (!req.params.eventId) {
+        res.status(status.BAD_REQUEST).json({ error: "Event ID is required" });
+        return;
+      }
+
+      const eventId = req.params.eventId;
+
+      // Les admins peuvent supprimer n'importe quel événement (checkOwnership = false)
+      const result = await this.deleteEventLogic(eventId, false, req.userId);
+
+      if (!result.success) {
+        res.status(result.statusCode || status.INTERNAL_SERVER_ERROR).json({ error: result.error });
+        return;
+      }
+
+      res.status(status.NO_CONTENT).end();
     } catch (error) {
       next(error);
     }

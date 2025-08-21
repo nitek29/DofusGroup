@@ -38,6 +38,11 @@ export default function Header() {
                   <li className="nav_link">
                     <Link to="/profile">Bonjour, {user.username}</Link>
                   </li>
+                  {user.role === 'admin' && (
+                    <li className="nav_link admin-link">
+                      <Link to="/admin">🔧 Admin</Link>
+                    </li>
+                  )}
                   <li>
                     <button
                       type="button"

@@ -29,6 +29,8 @@ export class AuthController {
         return;
       }
 
+      req.body.role = "user";
+
       const newUser: AuthUser = await this.repository.register(req.body);
 
       res.status(status.CREATED).json(newUser);

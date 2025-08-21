@@ -206,6 +206,7 @@ describe("CharacterController", () => {
           user: {
             id: "436d798e-b084-454c-8f78-593e966a9a66",
             username: "Goldorak",
+            role: "user",
           },
           breed: { id: "9a252130-3af3-4e5c-a957-a04a6f23c59a", name: "Sram" },
           server: {
@@ -289,6 +290,7 @@ describe("CharacterController", () => {
         user: {
           id: "436d798e-b084-454c-8f78-593e966a9a66",
           username: "Goldorak",
+          role: "user",
         },
         breed: { id: "9a252130-3af3-4e5c-a957-a04a6f23c59a", name: "Sram" },
         server: {

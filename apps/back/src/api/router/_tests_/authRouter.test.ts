@@ -25,7 +25,7 @@ describe("authRouter", () => {
     vi.clearAllMocks();
     
     // Mock AuthService methods
-    vi.spyOn(service, 'setAuthUserRequest').mockImplementation((req: any, res: any, next: NextFunction) => {
+    vi.spyOn(service, 'setAuthUserRequest').mockImplementation(async (req: any, res: any, next: NextFunction) => {
       req.userId = userId; // Set the userId for authenticated requests
       next();
     });

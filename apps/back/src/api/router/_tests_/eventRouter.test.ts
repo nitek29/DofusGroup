@@ -22,7 +22,7 @@ describe("eventRouter", () => {
     vi.clearAllMocks();
     
     // Mock AuthService methods
-    vi.spyOn(service, 'setAuthUserRequest').mockImplementation((req: any, res: any, next: NextFunction) => {
+    vi.spyOn(service, 'setAuthUserRequest').mockImplementation(async (req: any, res: any, next: NextFunction) => {
       // Si il y a un token dans les cookies, on simule l'extraction de l'userId
       if (req.cookies?.token) {
         try {

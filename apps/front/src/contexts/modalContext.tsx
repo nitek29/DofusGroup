@@ -25,8 +25,9 @@ interface ModalContextType {
   error: string | null;
   setError: (message: string | null) => void;
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
-  openModal: (type: string) => void;
+  openModal: (type: string, data?: any) => void;
   closeModal: () => void;
+  modalData?: any; // Pour stocker les données de l'élément à éditer
 }
 
 interface ModalProviderProps {
@@ -40,6 +41,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
   const [modalType, setModalType] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(new FormData());
   const [error, setError] = useState<string | null>(null);
+  const [modalData, setModalData] = useState<any>(null);
   const { setUser } = useAuth();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -87,7 +89,9 @@ export default function ModalProvider({ children }: ModalProviderProps) {
         const tag_id = formData.get("tag_id") as string;
         const server_id = formData.get("server_id") as string;
         const description = formData.get("description") as string;
-        
+        const character_id = formData.get("character_id") as string;
+        const status =  formData.get("status") as string;
+
         const eventData = {
           title,
           date: new Date(date),
@@ -99,13 +103,54 @@ export default function ModalProvider({ children }: ModalProviderProps) {
           tag_id,
           server_id,
           description: description || undefined,
-          characters_id: [], // Tableau vide par défaut
-          // TODO: Ajouter la logique pour remplir characters_id
+          characters_id: character_id ? [character_id] : [],
+          status
         };
         
         console.log("Creating event:", eventData);
         const response = await eventService.createEvent(eventData);
         console.log("Event created:", response);
+      } else if (modalType === "editEvent") {
+        // Récupération manuelle des données du formulaire pour la modification d'événements
+        const title = formData.get("title") as string;
+        const date = formData.get("date") as string;
+        const duration = parseInt(formData.get("duration") as string);
+        const max_players = parseInt(formData.get("max_players") as string);
+        const area = formData.get("area") as string;
+        const sub_area = formData.get("sub_area") as string;
+        const donjon_name = formData.get("donjon_name") as string;
+        const tag_id = formData.get("tag_id") as string;
+        const server_id = formData.get("server_id") as string;
+        const description = formData.get("description") as string;
+        const character_id = formData.get("character_id") as string;
+        const status =  formData.get("status") as string;
+
+        const eventData = {
+          title,
+          date: new Date(date),
+          duration,
+          max_players,
+          area,
+          sub_area,
+          donjon_name: donjon_name || undefined,
+          tag_id,
+          server_id,
+          description: description || undefined,
+          characters_id: character_id ? [character_id] : [],
+          status
+        };
+        
+        console.log("Updating event:", eventData);
+        
+        // Vérifier si c'est un admin modifiant l'événement d'un autre utilisateur
+        const currentUser = modalData?.eventToEdit?.user; // L'utilisateur propriétaire de l'événement
+        if (modalData?.isAdminEdit && currentUser?.id) {
+          const response = await eventService.adminUpdateEvent(currentUser.id, modalData.eventToEdit.id, eventData);
+          console.log("Event updated by admin:", response);
+        } else {
+          const response = await eventService.updateEvent(modalData.eventToEdit?.id || modalData.id, eventData);
+          console.log("Event updated:", response);
+        }
       } else if (modalType === "createCharacter") {
         const keys: (keyof CharacterForm)[] = [
           "name",
@@ -191,14 +236,16 @@ export default function ModalProvider({ children }: ModalProviderProps) {
 
   const resetForm = () => setFormData(new FormData());
 
-  const openModal = (type: string) => {
+  const openModal = (type: string, data?: any) => {
     setModalType(type);
+    setModalData(data);
     setIsOpen(true);
   };
 
   const closeModal = () => {
     setIsOpen(false);
     setModalType(null);
+    setModalData(null);
     setError(null);
     setFormData(new FormData());
   };
@@ -213,6 +260,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
     handleSubmit,
     openModal,
     closeModal,
+    modalData,
   };
 
   return (

@@ -3,23 +3,43 @@ import "./EventForm.scss";
 import { Event } from "../../../types/event";
 import { Tag } from "../../../types/tag";
 import { Server } from "../../../types/server";
+import { Character } from  "../../../types/character";
 
 interface EventFormProps {
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   error: string | null;
   tags?: Tag[];
   servers?: Server[];
+  characters?: Character[];
+  eventToEdit?: Event;
+  isEditing?: boolean;
 }
 
 export default function EventForm({
   handleSubmit,
   error,
   tags = [],
-  servers = []
-}: EventFormProps) {
+  servers = [],
+  characters = [],
+  eventToEdit,
+  isEditing = false,
+}: EventFormProps) {  
+  // Fonction pour formater la date pour l'input datetime-local
+  const formatDateForInput = (date: Date | string) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   return (
     <div className="event_modal">
-      <h3 className="event_modal_title">Créer un événement</h3>
+      <h3 className="event_modal_title">
+        {isEditing ? "Modifier l'événement" : "Créer un événement"}
+      </h3>
       <form onSubmit={handleSubmit} className="event_modal_form">
         <label htmlFor="title" className="event_modal_form_label">
           <span>Titre:</span>
@@ -29,6 +49,7 @@ export default function EventForm({
             id="title"
             required
             placeholder="Titre de l'événement"
+            defaultValue={eventToEdit?.title || ""}
             className="event_modal_form_label_input"
           />
         </label>
@@ -41,6 +62,7 @@ export default function EventForm({
               name="date"
               id="date"
               required
+              defaultValue={eventToEdit?.date ? formatDateForInput(eventToEdit.date) : ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -55,6 +77,7 @@ export default function EventForm({
               min="15"
               max="480"
               placeholder="120"
+              defaultValue={eventToEdit?.duration || ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -71,6 +94,7 @@ export default function EventForm({
               min="1"
               max="20"
               placeholder="8"
+              defaultValue={eventToEdit?.max_players || ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -81,12 +105,52 @@ export default function EventForm({
               name="tag_id"
               id="tag_id"
               required
+              defaultValue={eventToEdit?.tag?.name || ""}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un tag</option>
               {tags.map((tag) => (
                 <option key={tag.id} value={tag.id}>
                   {tag.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="form-row">
+          <label htmlFor="status" className="event_modal_form_label">
+            <span>Status:</span>
+            <select
+              name="status"
+              id="status"
+              required
+              defaultValue={eventToEdit?.status || ""}
+              className="event_modal_form_label_input"
+            >
+              <option value="">Sélectionner un status</option>
+              <option key="public" value="public">
+                Public
+              </option>
+              <option key="private" value="private">
+                Privé
+              </option>
+            </select>
+          </label>
+          
+          <label htmlFor="character_id" className="event_modal_form_label">
+            <span>Personnage:</span>
+            <select
+              name="character_id"
+              id="character_id"
+              required
+              defaultValue={eventToEdit?.characters?.[0]?.name || ""}
+              className="event_modal_form_label_input"
+            >
+              <option value="">Sélectionner un personnage</option>
+              {characters.map((character) => (
+                <option key={character.id} value={character.id}>
+                  {character.name}
                 </option>
               ))}
             </select>
@@ -102,6 +166,7 @@ export default function EventForm({
               id="area"
               required
               placeholder="Astrub"
+              defaultValue={eventToEdit?.area || ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -114,6 +179,7 @@ export default function EventForm({
               id="sub_area"
               required
               placeholder="Forêt d'Astrub"
+              defaultValue={eventToEdit?.sub_area || ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -127,6 +193,7 @@ export default function EventForm({
               name="donjon_name"
               id="donjon_name"
               placeholder="Donjon des Rats du Château d'Amakna"
+              defaultValue={eventToEdit?.donjon_name || ""}
               className="event_modal_form_label_input"
             />
           </label>
@@ -137,6 +204,7 @@ export default function EventForm({
               name="server_id"
               id="server_id"
               required
+              defaultValue={eventToEdit?.server?.name || ""}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un serveur</option>
@@ -156,16 +224,17 @@ export default function EventForm({
             id="description"
             placeholder="Description de l'événement..."
             rows={4}
+            defaultValue={eventToEdit?.description || ""}
             className="event_modal_form_label_input"
           />
         </label>
 
         <button
           type="submit"
-          aria-label="Créer l'événement"
+          aria-label={isEditing ? "Modifier l'événement" : "Créer l'événement"}
           className="event_modal_form_button button"
         >
-          Créer l'événement
+          {isEditing ? "Modifier l'événement" : "Créer l'événement"}
         </button>
       </form>
 

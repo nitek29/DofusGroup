@@ -70,6 +70,35 @@ export class CharacterRepository {
     }
   }
 
+  public async getOneEnriched(
+    characterId: string,
+  ): Promise<CharacterEnriched | null> {
+    try {
+      const result: CharacterEntity | null = await CharacterEntity.findOne({
+        where: { id: characterId },
+        include: [
+          "server",
+          "breed",
+          "events",
+          {
+            association: "user",
+            attributes: { exclude: ["mail", "password"] },
+          },
+        ],
+      });
+
+      if (!result) {
+        return null;
+      }
+
+      const character: CharacterEnriched = result.get({ plain: true });
+
+      return character;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   public async getOneEnrichedByUserId(
     userId: string,
     characterId: string,
@@ -114,14 +143,13 @@ export class CharacterRepository {
   }
 
   public async update(
-    userId: string,
     characterId: string,
     characterData: Partial<CharacterBodyData>,
-  ): Promise<Character | null> {
+  ): Promise<CharacterEnriched | null> {
     try {
       const characterToUpdate: CharacterEntity | null =
         await CharacterEntity.findOne({
-          where: { id: characterId, user_id: userId },
+          where: { id: characterId, user_id: characterData.user_id },
         });
 
       if (!characterToUpdate) {

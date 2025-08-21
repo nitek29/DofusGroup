@@ -10,6 +10,10 @@ interface EventCardProps {
 export default function EventCard({ event }: EventCardProps) {
   const navigate = useNavigate();
 
+  const handleDetails = () => {
+    navigate("/event", { state: { eventId: event.id } });
+  };
+
   return (
     <article className="event_card">
       <h2 className="event_card_title">{event.title}</h2>
@@ -31,7 +35,7 @@ export default function EventCard({ event }: EventCardProps) {
       </p>
       <button
         className="event_card_button button"
-        onClick={() => navigate(`/details/${event.id}`)}
+        onClick={handleDetails}
       >
         Détails
       </button>
