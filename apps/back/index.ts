@@ -14,7 +14,7 @@ const config = Config.getInstance();
 app.use(
   cors({
     origin: "http://localhost:5173",
-    credentials: true, // Permet l'envoi de cookies
+    credentials: true,
   }),
 );
 
