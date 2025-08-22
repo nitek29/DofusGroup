@@ -34,6 +34,51 @@ describe("eventRouter", () => {
       }
       next();
     });
+
+    vi.spyOn(service, 'setAuthUserRequestWithRole').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Si il y a un token dans les cookies, on simule l'extraction de l'userId et du rôle
+      if (req.cookies?.token) {
+        try {
+          const decoded = jwt.verify(req.cookies.token, secret) as any;
+          req.userId = decoded.sub;
+          req.userRole = "user"; // Par défaut, sauf si on veut tester admin
+        } catch (error) {
+          // Token invalide, pas d'userId
+        }
+      }
+      next();
+    });
+
+    vi.spyOn(service, 'checkOwnerOrAdmin').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Vérifie que l'utilisateur est propriétaire ou admin
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      // Si userId du token != userId des params, et que ce n'est pas un admin, on refuse
+      if (req.params.userId && req.userId !== req.params.userId && req.userRole !== "admin") {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      next();
+    });
+
+    vi.spyOn(service, 'checkPermission').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Vérifie que l'utilisateur a la permission (similaire à checkOwnerOrAdmin)
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      if (req.params.userId && req.userId !== req.params.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      next();
+    });
     
     app = setup.App<EventController, [AuthService]>(
       controller,

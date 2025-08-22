@@ -62,6 +62,7 @@ export function createEventRouter(
       htmlSanitizer,
       validateSchema(updateEventSchema),
       (req: AuthenticatedRequest, res, next) => {
+        console.log("Admin update event")
         // Si c'est un admin, utiliser la méthode admin, sinon la méthode normale
         if (req.userRole === "admin" && req.userId !== req.params.userId) {
           controller.adminUpdateEvent(req, res, next);
@@ -106,10 +107,11 @@ export function createEventRouter(
   );
 
   router
-    .route("event/:eventId")
+    .route("/event/:eventId")
     .patch(
       validateUUID,
       authService.setAuthUserRequest.bind(authService),
+      authService.checkOwnerOrAdmin.bind(authService),
       htmlSanitizer,
       validateSchema(updateEventSchema),
       (req, res, next) => {

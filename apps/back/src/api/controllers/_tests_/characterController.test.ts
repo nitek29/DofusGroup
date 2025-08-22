@@ -28,6 +28,10 @@ describe("CharacterController", () => {
     CharacterRepository.prototype,
     "getOneEnrichedByUserId",
   );
+  const mockGetOneEnrichedGeneral = vi.spyOn(
+    CharacterRepository.prototype,
+    "getOneEnriched",
+  );
   const mockPost = vi.spyOn(CharacterRepository.prototype, "post");
   const mockUpdate = vi.spyOn(CharacterRepository.prototype, "update");
   const mockDelete = vi.spyOn(CharacterRepository.prototype, "delete");
@@ -36,6 +40,7 @@ describe("CharacterController", () => {
   res = {
     json: vi.fn(),
     status: vi.fn().mockReturnThis(),
+    end: vi.fn(),
   };
 
   beforeEach(() => {
@@ -386,13 +391,36 @@ describe("CharacterController", () => {
         default_character: false,
       };
 
+      const mockNewCharacterEnriched: CharacterEnriched = {
+        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+        name: "TestChar",
+        sex: "M",
+        level: 100,
+        alignment: "Bonta",
+        stuff: "https://d-bk.net/fr/d/test",
+        default_character: false,
+        user: {
+          id: "436d798e-b084-454c-8f78-593e966a9a66",
+          username: "TestUser",
+          role: "user",
+        },
+        breed: { id: "123e4567-e89b-12d3-a456-426614174000", name: "TestBreed" },
+        server: {
+          id: "987fcdeb-51a2-43d1-9c45-987654321000",
+          name: "TestServer",
+          mono_account: false,
+        },
+        events: [],
+      };
+
       mockPost.mockResolvedValue(mockNewCharacter);
+      mockGetOneEnriched.mockResolvedValue(mockNewCharacterEnriched);
       // WHEN
       await underTest.create(authReq, res as Response, next);
       //THEN
       expect(mockPost).toHaveBeenCalledWith(expectedCharacterData);
       expect(res.status).toHaveBeenCalledWith(status.CREATED);
-      expect(res.json).toHaveBeenCalledWith(mockNewCharacter);
+      expect(res.json).toHaveBeenCalledWith(mockNewCharacterEnriched);
     });
 
     it("Return 403 if user is not authenticated.", async () => {
@@ -434,6 +462,29 @@ describe("CharacterController", () => {
         alignment: "Brakmar",
         default_character: false,
       };
+      
+      const mockExistingCharacterEnriched: CharacterEnriched = {
+        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+        name: "Night-Hunter",
+        sex: "M",
+        level: 190,
+        alignment: "Bonta",
+        stuff: "https://d-bk.net/fr/d/1EFhw",
+        default_character: true,
+        user: {
+          id: "436d798e-b084-454c-8f78-593e966a9a66",
+          username: "TestUser",
+          role: "user",
+        },
+        breed: { id: "123e4567-e89b-12d3-a456-426614174000", name: "TestBreed" },
+        server: {
+          id: "987fcdeb-51a2-43d1-9c45-987654321000",
+          name: "TestServer",
+          mono_account: false,
+        },
+        events: [],
+      };
+      
       const mockUpdatedCharacter: Character = {
         id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
         name: "Night-Hunter",
@@ -444,16 +495,46 @@ describe("CharacterController", () => {
         default_character: false,
       };
 
+      const mockUpdatedCharacterEnriched: CharacterEnriched = {
+        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+        name: "Night-Hunter",
+        sex: "M",
+        level: 200,
+        alignment: "Brakmar",
+        stuff: "https://d-bk.net/fr/d/1EFhw",
+        default_character: false,
+        user: {
+          id: "436d798e-b084-454c-8f78-593e966a9a66",
+          username: "TestUser",
+          role: "user",
+        },
+        breed: { id: "123e4567-e89b-12d3-a456-426614174000", name: "TestBreed" },
+        server: {
+          id: "987fcdeb-51a2-43d1-9c45-987654321000",
+          name: "TestServer",
+          mono_account: false,
+        },
+        events: [],
+      };
+
+      // Mock des appels dans updateCharacterLogic
+      mockGetOneEnrichedGeneral.mockResolvedValue(mockExistingCharacterEnriched);
       mockUpdate.mockResolvedValue(mockUpdatedCharacter);
+      mockGetOneEnrichedGeneral.mockResolvedValueOnce(mockExistingCharacterEnriched)
+        .mockResolvedValueOnce(mockUpdatedCharacterEnriched);
+
       // WHEN
       await underTest.update(authReq, res as Response, next);
       //THEN
+      const expectedUpdateData = {
+        ...authReq.body,
+        user_id: authReq.userId,
+      };
       expect(mockUpdate).toHaveBeenCalledWith(
-        authReq.userId,
         authReq.params.characterId,
-        authReq.body,
+        expectedUpdateData,
       );
-      expect(res.json).toHaveBeenCalledWith(mockUpdatedCharacter);
+      expect(res.json).toHaveBeenCalledWith(mockUpdatedCharacterEnriched);
     });
 
     it("Return 403 if user is not authenticated.", async () => {
@@ -505,15 +586,40 @@ describe("CharacterController", () => {
       authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
       authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
 
+      const mockExistingCharacterEnriched: CharacterEnriched = {
+        id: "0f309e32-2281-4b46-bb2e-bc2a7248e39b",
+        name: "Night-Hunter",
+        sex: "M",
+        level: 190,
+        alignment: "Bonta",
+        stuff: "https://d-bk.net/fr/d/1EFhw",
+        default_character: true,
+        user: {
+          id: "436d798e-b084-454c-8f78-593e966a9a66",
+          username: "TestUser",
+          role: "user",
+        },
+        breed: { id: "123e4567-e89b-12d3-a456-426614174000", name: "TestBreed" },
+        server: {
+          id: "987fcdeb-51a2-43d1-9c45-987654321000",
+          name: "TestServer",
+          mono_account: false,
+        },
+        events: [],
+      };
+
+      // Mock uniquement getOneEnriched pour retourner le caractère existant
+      mockGetOneEnrichedGeneral.mockResolvedValue(mockExistingCharacterEnriched);
       mockDelete.mockResolvedValue(true);
+
       // WHEN
       await underTest.delete(authReq, res as Response, next);
+      
       //THEN
-      expect(mockDelete).toHaveBeenCalledWith(
-        authReq.userId,
-        authReq.params.characterId,
-      );
+      expect(mockGetOneEnrichedGeneral).toHaveBeenCalledWith(authReq.params.characterId);
+      expect(mockDelete).toHaveBeenCalledWith(authReq.userId, authReq.params.characterId);
       expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
+      expect(res.end).toHaveBeenCalled();
     });
 
     it("Return 403 if user is not authenticated.", async () => {
@@ -531,7 +637,9 @@ describe("CharacterController", () => {
       authReq.userId = "436d798e-b084-454c-8f78-593e966a9a66";
       authReq.params = { characterId: "non-existent-id" };
 
-      mockDelete.mockResolvedValue(false);
+      // Mock pour simuler caractère non trouvé ou utilisateur non propriétaire
+      mockGetOneEnrichedGeneral.mockResolvedValue(null);
+
       await underTest.delete(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
@@ -544,7 +652,7 @@ describe("CharacterController", () => {
       authReq.params = { characterId: "0f309e32-2281-4b46-bb2e-bc2a7248e39b" };
       const error = new Error();
 
-      mockDelete.mockRejectedValue(error);
+      mockGetOneEnrichedGeneral.mockRejectedValue(error);
       await underTest.delete(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);

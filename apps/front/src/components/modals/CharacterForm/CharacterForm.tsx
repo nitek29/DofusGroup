@@ -21,6 +21,20 @@ export default function CharacterForm({
 }: CharacterFormProps) {
   const isEditing = !!character;
 
+  // Fonctions de transformation pour l'affichage
+  const transformSexForDisplay = (sex: string) => {
+    return sex === 'F' ? 'female' : 'male';
+  };
+
+  const transformAlignmentForDisplay = (alignment: string) => {
+    switch(alignment) {
+      case 'Bonta': return 'bontarien';
+      case 'Brâkmar': return 'brakmarien';
+      case 'Neutre': return 'neutral';
+      default: return alignment.toLowerCase();
+    }
+  };
+
   return (
     <div className="character_modal">
       <h3 className="character_modal_title">
@@ -47,7 +61,7 @@ export default function CharacterForm({
               name="sex"
               id="sex"
               required
-              defaultValue={character?.sex || ""}
+              defaultValue={character ? transformSexForDisplay(character.sex) : ""}
               className="character_modal_form_label_input"
             >
               <option value="">Sélectionner...</option>
@@ -79,7 +93,7 @@ export default function CharacterForm({
               name="alignment"
               id="alignment"
               required
-              defaultValue={character?.alignment || ""}
+              defaultValue={character ? transformAlignmentForDisplay(character.alignment) : ""}
               className="character_modal_form_label_input"
             >
               <option value="">Sélectionner...</option>
@@ -96,7 +110,7 @@ export default function CharacterForm({
             name="breed_id"
             id="breed_id"
             required
-            defaultValue={character ? "" : ""} // TODO: Handle breed selection for editing
+            defaultValue={character?.breed_id || ""}
             className="character_modal_form_label_input"
           >
             <option value="">Sélectionner une classe...</option>
@@ -114,7 +128,7 @@ export default function CharacterForm({
             name="server_id"
             id="server_id"
             required
-            defaultValue={character ? "" : ""} // TODO: Handle server selection for editing
+            defaultValue={character?.server_id || ""}
             className="character_modal_form_label_input"
           >
             <option value="">Sélectionner un serveur...</option>

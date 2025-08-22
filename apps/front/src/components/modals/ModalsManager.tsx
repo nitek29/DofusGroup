@@ -33,6 +33,7 @@ export default function ModalsManager() {
   useEffect(() => {
     const fetchData = async () => {
       if (modalType === "createEvent" || modalType === "editEvent") {
+        console.log(" fetchData EditEvent") ? modalType === "editEvent" : null
         try {
           // Récupérer les tags et serveurs
           const [tagsResponse, serversResponse, charactersResponse] = await Promise.all([
@@ -58,6 +59,18 @@ export default function ModalsManager() {
         } catch (error) {
           console.error("Erreur lors du chargement des données:", error);
         }
+      } else if (modalType === "editCharacter") {
+        try {
+          // Récupérer les breeds et serveurs pour l'édition
+          const [breedsResponse, serversResponse] = await Promise.all([
+            axios.instance.get<Breed[]>("/breeds"),
+            axios.instance.get<Server[]>("/servers"),
+          ]);
+          setBreeds(breedsResponse.data);
+          setServers(serversResponse.data);
+        } catch (error) {
+          console.error("Erreur lors du chargement des données:", error);
+        }
       }
     };
 
@@ -68,7 +81,7 @@ export default function ModalsManager() {
 
   return (
     <div className="modal" onClick={closeModal}>
-      <div className={`modal_content ${modalType === "createEvent" || modalType === "editEvent" || modalType === "createCharacter" ? "large" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`modal_content ${modalType === "createEvent" || modalType === "editEvent" || modalType === "createCharacter" || modalType === "editCharacter" ? "large" : ""}`} onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           aria-label="Close modal"
@@ -107,7 +120,7 @@ export default function ModalsManager() {
               tags={tags}
               servers={servers}
               characters={characters}
-              eventToEdit={modalData}
+              eventToEdit={modalData?.eventToEdit || modalData}
               isEditing={true}
             />
           )}
@@ -117,6 +130,15 @@ export default function ModalsManager() {
               error={error}
               breeds={breeds}
               servers={servers}
+            />
+          )}
+          {modalType === "editCharacter" && (
+            <CharacterForm
+              handleSubmit={(event) => handleSubmit(event)}
+              error={error}
+              breeds={breeds}
+              servers={servers}
+              character={modalData}
             />
           )}
           {modalType === "updateUser" && (

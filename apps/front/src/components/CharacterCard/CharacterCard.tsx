@@ -57,7 +57,7 @@ export default function CharacterCard({ character, onEdit, onDelete }: Character
         
         {character.stuff && (
           <div className="character_card_stuff">
-            <span className="character_card_label">Équipement:</span>
+            <span className="character_card_label">Équipement (URL):</span>
             <p className="character_card_stuff_text">{character.stuff}</p>
           </div>
         )}

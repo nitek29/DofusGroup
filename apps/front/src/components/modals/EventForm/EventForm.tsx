@@ -4,6 +4,7 @@ import { Event } from "../../../types/event";
 import { Tag } from "../../../types/tag";
 import { Server } from "../../../types/server";
 import { Character } from  "../../../types/character";
+import { useState, useEffect } from "react";
 
 interface EventFormProps {
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -24,6 +25,33 @@ export default function EventForm({
   eventToEdit,
   isEditing = false,
 }: EventFormProps) {  
+  // États pour les valeurs des select
+  const [selectedTagId, setSelectedTagId] = useState<string>("");
+  const [selectedServerId, setSelectedServerId] = useState<string>("");
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+
+  // Initialiser les valeurs quand eventToEdit change
+  useEffect(() => {
+    if (eventToEdit) {
+      const tagId = eventToEdit.tag?.id || "";
+      const serverId = eventToEdit.server?.id || "";
+      const characterId = eventToEdit.characters?.[0]?.id || "";
+      const status = eventToEdit.status || "";
+      
+      setSelectedTagId(tagId);
+      setSelectedServerId(serverId);
+      setSelectedCharacterId(characterId);
+      setSelectedStatus(status);
+    } else {
+      // Réinitialiser pour la création
+      setSelectedTagId("");
+      setSelectedServerId("");
+      setSelectedCharacterId("");
+      setSelectedStatus("");
+    }
+  }, [eventToEdit, tags, servers, characters]);
+
   // Fonction pour formater la date pour l'input datetime-local
   const formatDateForInput = (date: Date | string) => {
     const d = new Date(date);
@@ -105,7 +133,8 @@ export default function EventForm({
               name="tag_id"
               id="tag_id"
               required
-              defaultValue={eventToEdit?.tag?.name || ""}
+              value={selectedTagId}
+              onChange={(e) => setSelectedTagId(e.target.value)}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un tag</option>
@@ -125,7 +154,8 @@ export default function EventForm({
               name="status"
               id="status"
               required
-              defaultValue={eventToEdit?.status || ""}
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un status</option>
@@ -144,7 +174,8 @@ export default function EventForm({
               name="character_id"
               id="character_id"
               required
-              defaultValue={eventToEdit?.characters?.[0]?.name || ""}
+              value={selectedCharacterId}
+              onChange={(e) => setSelectedCharacterId(e.target.value)}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un personnage</option>
@@ -204,7 +235,8 @@ export default function EventForm({
               name="server_id"
               id="server_id"
               required
-              defaultValue={eventToEdit?.server?.name || ""}
+              value={selectedServerId}
+              onChange={(e) => setSelectedServerId(e.target.value)}
               className="event_modal_form_label_input"
             >
               <option value="">Sélectionner un serveur</option>

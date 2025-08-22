@@ -24,21 +24,21 @@ export default function Events() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const eventsData = await eventService.getEvents(10, currentPage);
-        setEvents(eventsData.events);
-        setTotalPages(eventsData.totalPages);
-      } catch (error) {
-        if (isAxiosError(error)) {
-          console.error("Axios error:", error.message);
-        } else if (error instanceof Error) {
-          console.error("General error:", error.message);
-        }
+  const fetchEvents = async () => {
+    try {
+      const eventsData = await eventService.getEvents(10, currentPage);
+      setEvents(eventsData.events);
+      setTotalPages(eventsData.totalPages);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error("Axios error:", error.message);
+      } else if (error instanceof Error) {
+        console.error("General error:", error.message);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchEvents();
   }, [currentPage]);
 
@@ -55,7 +55,7 @@ export default function Events() {
         {isAuthenticated && (
           <button 
             className="events_create_btn"
-            onClick={() => openModal("createEvent")}
+            onClick={() => openModal("createEvent", undefined, fetchEvents)}
             type="button"
           >
             Créer un événement

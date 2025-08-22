@@ -25,9 +25,10 @@ interface ModalContextType {
   error: string | null;
   setError: (message: string | null) => void;
   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
-  openModal: (type: string, data?: any) => void;
+  openModal: (type: string, data?: any, successCallback?: () => void) => void;
   closeModal: () => void;
   modalData?: any; // Pour stocker les données de l'élément à éditer
+  onSuccess?: () => void; // Callback pour rafraîchir les données après succès
 }
 
 interface ModalProviderProps {
@@ -42,6 +43,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
   const [formData, setFormData] = useState<FormData>(new FormData());
   const [error, setError] = useState<string | null>(null);
   const [modalData, setModalData] = useState<any>(null);
+  const [onSuccess, setOnSuccess] = useState<(() => void) | undefined>(undefined);
   const { setUser } = useAuth();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -111,6 +113,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
         const response = await eventService.createEvent(eventData);
         console.log("Event created:", response);
       } else if (modalType === "editEvent") {
+        console.log(" EditEvent modal")
         // Récupération manuelle des données du formulaire pour la modification d'événements
         const title = formData.get("title") as string;
         const date = formData.get("date") as string;
@@ -143,12 +146,20 @@ export default function ModalProvider({ children }: ModalProviderProps) {
         console.log("Updating event:", eventData);
         
         // Vérifier si c'est un admin modifiant l'événement d'un autre utilisateur
-        const currentUser = modalData?.eventToEdit?.user; // L'utilisateur propriétaire de l'événement
-        if (modalData?.isAdminEdit && currentUser?.id) {
-          const response = await eventService.adminUpdateEvent(currentUser.id, modalData.eventToEdit.id, eventData);
-          console.log("Event updated by admin:", response);
+        if (modalData?.isAdminEdit && modalData?.eventToEdit) {
+          const currentUser = modalData.eventToEdit.user; // L'utilisateur propriétaire de l'événement
+          if (currentUser?.id) {
+            const response = await eventService.adminUpdateEvent(currentUser.id, modalData.eventToEdit.id, eventData);
+            console.log("Event updated by admin:", response);
+          } else {
+            throw new Error("Impossible de modifier l'événement : utilisateur propriétaire introuvable");
+          }
         } else {
-          const response = await eventService.updateEvent(modalData.eventToEdit?.id || modalData.id, eventData);
+          const eventId = modalData?.eventToEdit?.id || modalData?.id;
+          if (!eventId) {
+            throw new Error("Impossible de modifier l'événement : ID introuvable");
+          }
+          const response = await eventService.updateEvent(eventId, eventData);
           console.log("Event updated:", response);
         }
       } else if (modalType === "createCharacter") {
@@ -174,7 +185,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
           switch(alignment) {
             case 'bontarien': return 'Bonta';
             case 'brakmarien': return 'Brâkmar';
-            case 'neutre': return 'Neutre';
+            case 'neutral': return 'Neutre';
             default: return alignment;
           }
         };
@@ -193,6 +204,48 @@ export default function ModalProvider({ children }: ModalProviderProps) {
         console.log("Creating character:", characterData);
         const response = await characterService.createCharacter(characterData);
         console.log("Character created:", response);
+      } else if (modalType === "editCharacter") {
+        const keys: (keyof CharacterForm)[] = [
+          "name",
+          "sex",
+          "level",
+          "alignment",
+          "stuff",
+          "default_character",
+          "breed_id",
+          "server_id",
+        ];
+
+        const characterFormData = formDataToObject(formData, keys) as unknown as CharacterForm;
+        
+        // Transformation des valeurs frontend vers backend
+        const transformSex = (sex: string) => {
+          return sex === 'female' ? 'F' : 'M';
+        };
+        
+        const transformAlignment = (alignment: string) => {
+          switch(alignment) {
+            case 'bontarien': return 'Bonta';
+            case 'brakmarien': return 'Brâkmar';
+            case 'neutral': return 'Neutre';
+            default: return alignment;
+          }
+        };
+        
+        const characterData = {
+          name: characterFormData.name,
+          sex: transformSex(characterFormData.sex),
+          level: parseInt(characterFormData.level.toString()),
+          alignment: transformAlignment(characterFormData.alignment),
+          ...(characterFormData.stuff && characterFormData.stuff.trim() !== '' && { stuff: characterFormData.stuff }),
+          default_character: !!characterFormData.default_character,
+          breed_id: characterFormData.breed_id,
+          server_id: characterFormData.server_id,
+        };
+
+        console.log("Updating character:", characterData);
+        const response = await characterService.updateCharacter(modalData.id, characterData);
+        console.log("Character updated:", response);
       } else if (modalType === "updateUser") {
         const keys: (keyof UpdateUserForm)[] = [
           "username",
@@ -224,10 +277,35 @@ export default function ModalProvider({ children }: ModalProviderProps) {
       }
 
       setError(null);
+      
+      // Appeler le callback de succès si fourni
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       closeModal();
     } catch (error) {
+      console.error("Modal submission error:", error);
+      
       if (error instanceof Error) {
-        setError(error.message);
+        console.error("Error message:", error.message);
+        
+        // Si c'est une erreur Axios, extraire les détails de validation
+        if ('response' in error && (error as any).response?.data) {
+          const responseData = (error as any).response.data;
+          console.error("Response data:", responseData);
+          
+          if (responseData.details && Array.isArray(responseData.details)) {
+            const validationMessages = responseData.details.map((detail: any) => detail.message).join(', ');
+            setError(`Erreur de validation: ${validationMessages}`);
+          } else if (responseData.message) {
+            setError(`Erreur: ${responseData.message}`);
+          } else {
+            setError(error.message);
+          }
+        } else {
+          setError(error.message);
+        }
       } else {
         setError("Une erreur est survenue");
       }
@@ -236,9 +314,10 @@ export default function ModalProvider({ children }: ModalProviderProps) {
 
   const resetForm = () => setFormData(new FormData());
 
-  const openModal = (type: string, data?: any) => {
+  const openModal = (type: string, data?: any, successCallback?: () => void) => {
     setModalType(type);
     setModalData(data);
+    setOnSuccess(() => successCallback);
     setIsOpen(true);
   };
 
@@ -246,6 +325,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
     setIsOpen(false);
     setModalType(null);
     setModalData(null);
+    setOnSuccess(undefined);
     setError(null);
     setFormData(new FormData());
   };
@@ -261,6 +341,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
     openModal,
     closeModal,
     modalData,
+    onSuccess,
   };
 
   return (

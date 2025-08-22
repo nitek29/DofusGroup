@@ -52,6 +52,7 @@ describe("EventController", () => {
     res = {
       json: vi.fn(),
       status: vi.fn().mockReturnThis(),
+      end: vi.fn(),
     };
     next = vi.fn();
   });
@@ -755,17 +756,20 @@ describe("EventController", () => {
   // --- PATCH ---
   describe("update", () => {
     it("Return event if updated.", async () => {
-      req.params = {
+      // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
         userId: "182a492c-feb7-4af8-910c-e61dc2536754",
         eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
       };
-      req.body = {
+      authReq.body = {
         title: "Donjon minotoror",
         max_players: 4,
         status: "private",
       };
-      // GIVEN
-      const mockDatas: EventBodyData = req.body;
+
+      const mockDatas: EventBodyData = { ...authReq.body, user_id: authReq.userId };
       const mockEventToUpdate: EventEnriched = {
         id: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
         title: "Donjon minotot",
@@ -788,67 +792,83 @@ describe("EventController", () => {
           mono_account: false,
         },
         user: {
-          id: "07a3cd78-3a4a-4aae-a681-7634d72197c2",
+          id: "182a492c-feb7-4af8-910c-e61dc2536754",
           username: "toto",
           role: "user"
         },
         characters: [],
       };
-      const mockUpdatedEvent = { ...mockEventToUpdate, ...mockDatas };
+      const mockUpdatedEvent = { ...mockEventToUpdate, ...authReq.body };
+      const mockUpdatedEventEnriched = { ...mockEventToUpdate, ...authReq.body };
 
+      // Mock pour updateEventLogic : getOneEnriched puis update
+      mockGetOneEnriched.mockResolvedValue(mockEventToUpdate);
       mockUpdate.mockResolvedValue(mockUpdatedEvent);
+      mockGetOneEnriched.mockResolvedValueOnce(mockEventToUpdate)
+        .mockResolvedValueOnce(mockUpdatedEventEnriched);
+
       // WHEN
-      await underTest.update(req as Request, res as Response, next);
+      await underTest.update(authReq, res as Response, next);
       //THEN
       expect(mockUpdatedEvent.title).toBe("Donjon minotoror");
       expect(mockUpdatedEvent.max_players).toBe(4);
       expect(mockUpdatedEvent.status).toBe("private");
-      expect(mockUpdate).toHaveBeenCalledWith(req.params.eventId, mockDatas);
-      expect(res.json).toHaveBeenCalledWith(mockUpdatedEvent);
+      expect(mockUpdate).toHaveBeenCalledWith(authReq.params.eventId, mockDatas);
+      expect(res.json).toHaveBeenCalledWith(mockUpdatedEventEnriched);
       expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
     });
 
-    it("Return 400 if userId isn't define.", async () => {
-      req.params = {};
+    it("Return 403 if userId isn't define.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = undefined;
+      authReq.params = { eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924" };
 
-      await underTest.update(req as Request, res as Response, next);
+      await underTest.update(authReq, res as Response, next);
 
-      expect(res.status).toHaveBeenCalledWith(status.BAD_REQUEST);
-      expect(res.json).toHaveBeenCalledWith({ error: "User ID is required" });
+      expect(res.status).toHaveBeenCalledWith(status.FORBIDDEN);
+      expect(res.json).toHaveBeenCalledWith({ error: "Forbidden access" });
     });
 
     it("Call next() if event doesn't exists.", async () => {
-      req.params = {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
         userId: "182a492c-feb7-4af8-910c-e61dc2536754",
         eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
       };
-      req.body = {
+      authReq.body = {
         title: "Donjon minotoror",
         max_player: "4",
         status: "private",
       };
 
-      mockUpdate.mockResolvedValue(null);
-      await underTest.update(req as Request, res as Response, next);
+      // Mock pour simuler événement non trouvé
+      mockGetOneEnriched.mockResolvedValue(null);
+
+      await underTest.update(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({ error: "Event not found" });
     });
 
     it("Call next() in case of error.", async () => {
-      req.params = {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
         userId: "182a492c-feb7-4af8-910c-e61dc2536754",
         eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
       };
-      req.body = {
+      authReq.body = {
         title: "Donjon minotoror",
         max_player: "4",
         status: "private",
       };
       const error = new Error();
 
-      mockUpdate.mockRejectedValue(error);
-      await underTest.update(req as Request, res as Response, next);
+      // Mock pour simuler une erreur lors du getOneEnriched
+      mockGetOneEnriched.mockRejectedValue(error);
+
+      await underTest.update(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -861,41 +881,120 @@ describe("EventController", () => {
         userId: "182a492c-feb7-4af8-910c-e61dc2536754",
         eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
       };
+      req.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
     });
 
     it("Return 204 if event is delete.", async () => {
       // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
+      const mockExistingEvent: EventEnriched = {
+        id: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+        title: "Donjon à supprimer",
+        date: new Date("2026-01-01"),
+        duration: 60,
+        area: "Amakna",
+        sub_area: "Ile des taures",
+        donjon_name: "Labyrinthe du minotoror",
+        description: "À supprimer",
+        max_players: 8,
+        status: "public",
+        tag: {
+          id: "f7a34554-d2d7-48d5-8bc2-1f7e4b06c8f8",
+          name: "Donjon",
+          color: "#DFF0FF",
+        },
+        server: {
+          id: "6c19c76b-cbc1-4a58-bdeb-b336eaf6f51c",
+          name: "Rafal",
+          mono_account: false,
+        },
+        user: {
+          id: "182a492c-feb7-4af8-910c-e61dc2536754",
+          username: "owner",
+          role: "user",
+        },
+        characters: [],
+      };
+
+      // Mock pour deleteEventLogic
+      mockGetOneEnriched.mockResolvedValue(mockExistingEvent);
       mockDelete.mockResolvedValue(true);
+
       // WHEN
-      await underTest.delete(req as Request, res as Response, next);
+      await underTest.delete(authReq, res as Response, next);
       //THEN
-      expect(mockDelete).toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledWith(authReq.userId, authReq.params.eventId);
       expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
+      expect(res.end).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
     });
 
     it("Return 400 if eventId isn't defined.", async () => {
-      req.params = { userId: "182a492c-feb7-4af8-910c-e61dc2536754" };
+      const authReq = req as AuthenticatedRequest;
+      authReq.params = { userId: "182a492c-feb7-4af8-910c-e61dc2536754" };
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
 
-      await underTest.delete(req as Request, res as Response, next);
+      await underTest.delete(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({ error: "Event ID is required" });
     });
 
     it("Call next() if event doesn't exists.", async () => {
-      mockDelete.mockResolvedValue(false);
-      await underTest.delete(req as Request, res as Response, next);
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
+      // Mock pour simuler événement non trouvé
+      mockGetOneEnriched.mockResolvedValue(null);
+
+      await underTest.delete(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({ error: "Event not found" });
     });
 
     it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "182a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
       const error = new Error();
 
+      // Mock pour simuler événement existant d'abord puis erreur
+      const mockEvent: EventEnriched = {
+        id: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+        title: "Test Event",
+        date: new Date("2026-01-01"),
+        duration: 60,
+        area: "Test Area",
+        sub_area: "Test Sub Area",
+        donjon_name: "Test Donjon",
+        description: "Test",
+        max_players: 8,
+        status: "public",
+        tag: { id: "tag1", name: "Tag", color: "#FF0000" },
+        server: { id: "server1", name: "Server", mono_account: false },
+        user: { id: "182a492c-feb7-4af8-910c-e61dc2536754", username: "user", role: "user" },
+        characters: [],
+      };
+
+      mockGetOneEnriched.mockResolvedValue(mockEvent);
       mockDelete.mockRejectedValue(error);
-      await underTest.delete(req as Request, res as Response, next);
+
+      await underTest.delete(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -914,37 +1013,106 @@ describe("EventController", () => {
 
     it("Return 204 if event is delete.", async () => {
       // GIVEN
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "999a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.userRole = "admin";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
+      const mockEvent: EventEnriched = {
+        id: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+        title: "Test Event",
+        date: new Date("2026-01-01"),
+        duration: 60,
+        area: "Test Area",
+        sub_area: "Test Sub Area",
+        donjon_name: "Test Donjon",
+        description: "Test",
+        max_players: 8,
+        status: "public",
+        tag: { id: "tag1", name: "Tag", color: "#FF0000" },
+        server: { id: "server1", name: "Server", mono_account: false },
+        user: { id: "182a492c-feb7-4af8-910c-e61dc2536754", username: "user", role: "user" },
+        characters: [],
+      };
+
+      mockGetOneEnriched.mockResolvedValue(mockEvent);
       mockDelete.mockResolvedValue(true);
+
       // WHEN
-      await underTest.delete(req as AuthenticatedRequest, res as Response, next);
+      await underTest.adminDeleteEvent(authReq, res as Response, next);
       //THEN
       expect(mockDelete).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(status.NO_CONTENT);
+      expect(res.end).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalledWith(status.NOT_FOUND);
     });
 
     it("Return 400 if eventId isn't defined.", async () => {
-      req.params = { userId: "182a492c-feb7-4af8-910c-e61dc2536754" };
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "999a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.userRole = "admin";
+      authReq.params = { userId: "182a492c-feb7-4af8-910c-e61dc2536754" };
 
-      await underTest.delete(req as Request, res as Response, next);
+      await underTest.adminDeleteEvent(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({ error: "Event ID is required" });
     });
 
     it("Call next() if event doesn't exists.", async () => {
-      mockDelete.mockResolvedValue(false);
-      await underTest.delete(req as Request, res as Response, next);
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "999a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.userRole = "admin";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
+      // Mock pour simuler événement non trouvé
+      mockGetOneEnriched.mockResolvedValue(null);
+
+      await underTest.adminDeleteEvent(authReq, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(status.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({ error: "Event not found" });
     });
 
     it("Call next() in case of error.", async () => {
+      const authReq = req as AuthenticatedRequest;
+      authReq.userId = "999a492c-feb7-4af8-910c-e61dc2536754";
+      authReq.userRole = "admin";
+      authReq.params = {
+        userId: "182a492c-feb7-4af8-910c-e61dc2536754",
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+
       const error = new Error();
 
+      // Mock pour simuler événement existant d'abord puis erreur
+      const mockEvent: EventEnriched = {
+        id: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+        title: "Test Event",
+        date: new Date("2026-01-01"),
+        duration: 60,
+        area: "Test Area",
+        sub_area: "Test Sub Area",
+        donjon_name: "Test Donjon",
+        description: "Test",
+        max_players: 8,
+        status: "public",
+        tag: { id: "tag1", name: "Tag", color: "#FF0000" },
+        server: { id: "server1", name: "Server", mono_account: false },
+        user: { id: "182a492c-feb7-4af8-910c-e61dc2536754", username: "user", role: "user" },
+        characters: [],
+      };
+
+      mockGetOneEnriched.mockResolvedValue(mockEvent);
       mockDelete.mockRejectedValue(error);
-      await underTest.delete(req as Request, res as Response, next);
+
+      await underTest.adminDeleteEvent(authReq, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
     });

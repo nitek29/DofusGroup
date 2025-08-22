@@ -28,32 +28,32 @@ export default function EventDetail() {
   // Récupérer l'ID de l'événement depuis l'état de navigation
   const eventId = location.state?.eventId;
 
-  useEffect(() => {
+  const fetchEvent = async () => {
     if (!eventId) {
       setError("Aucun événement spécifié");
       setLoading(false);
       return;
     }
 
-    const fetchEvent = async () => {
-      try {
-        setLoading(true);
-        // Utiliser l'endpoint enriched pour avoir toutes les données
-        const response = await axios.instance.get<Event>(`/event/${eventId}/enriched`);
-        setEvent(response.data);
-      } catch (error) {
-        if (isAxiosError(error)) {
-          setError(`Erreur lors du chargement de l'événement: ${error.message}`);
-        } else if (error instanceof Error) {
-          setError(`Erreur: ${error.message}`);
-        } else {
-          setError("Une erreur inconnue est survenue");
-        }
-      } finally {
-        setLoading(false);
+    try {
+      setLoading(true);
+      // Utiliser l'endpoint enriched pour avoir toutes les données
+      const response = await axios.instance.get<Event>(`/event/${eventId}/enriched`);
+      setEvent(response.data);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        setError(`Erreur lors du chargement de l'événement: ${error.message}`);
+      } else if (error instanceof Error) {
+        setError(`Erreur: ${error.message}`);
+      } else {
+        setError("Une erreur inconnue est survenue");
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchEvent();
   }, [eventId]);
 
@@ -61,7 +61,7 @@ export default function EventDetail() {
 
   const handleEdit = () => {
     if (event) {
-      openModal("editEvent", event);
+      openModal("editEvent", event, fetchEvent);
     }
   };
 

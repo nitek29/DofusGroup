@@ -46,10 +46,11 @@ const Admin: React.FC = () => {
   };
 
   const handleEditEvent = (event: EventEnriched) => {
+    console.log("handleEditEvent")
     openModal('editEvent', { 
       eventToEdit: event,
       isAdminEdit: true 
-    });
+    }, fetchAllEvents); // Passer fetchAllEvents comme callback
   };
 
   const handleDeleteEvent = async (event: EventEnriched) => {

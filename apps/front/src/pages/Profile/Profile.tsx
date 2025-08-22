@@ -27,51 +27,50 @@ export default function Profile() {
   const [events, setEvents] = useState<Event[] | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchCharacters = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const charactersData = await characterService.getUserCharacters();
+      setCharacters(charactersData);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error("Axios error:", error.message);
+      } else if (error instanceof Error) {
+        console.error("General error:", error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEvents = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const eventsData = await eventService.getEvents();
+      setEvents(eventsData.events);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        console.error("Axios error:", error.message);
+      } else if (error instanceof Error) {
+        console.error("General error:", error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCharacters = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        const charactersData = await characterService.getUserCharacters();
-        setCharacters(charactersData);
-      } catch (error) {
-        if (isAxiosError(error)) {
-          console.error("Axios error:", error.message);
-        } else if (error instanceof Error) {
-          console.error("General error:", error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchEvents = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        const eventsData = await eventService.getEvents();
-        setEvents(eventsData.events);
-      } catch (error) {
-        if (isAxiosError(error)) {
-          console.error("Axios error:", error.message);
-        } else if (error instanceof Error) {
-          console.error("General error:", error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCharacters();
     fetchEvents();
   }, [user]);
 
   const handleEditCharacter = (character: Character) => {
-    // TODO: Implémenter l'édition de personnage
     console.log("Edit character:", character);
-    openModal("editCharacter");
+    openModal("editCharacter", character, fetchCharacters);
   };
 
   const handleDeleteCharacter = async (characterId: string) => {
@@ -125,7 +124,7 @@ export default function Profile() {
         <div className="profile_section_header">
           <h2 className="profile_section_title">Mes Personnages</h2>
           <button
-            onClick={() => openModal("createCharacter")}
+            onClick={() => openModal("createCharacter", undefined, fetchCharacters)}
             className="profile_action_button secondary"
           >
             Ajouter un personnage
@@ -150,7 +149,7 @@ export default function Profile() {
             <div className="profile_empty">
               <p>Vous n'avez pas encore de personnages.</p>
               <button
-                onClick={() => openModal("createCharacter")}
+                onClick={() => openModal("createCharacter", undefined, fetchCharacters)}
                 className="profile_action_button primary"
               >
                 Créer mon premier personnage
@@ -164,7 +163,7 @@ export default function Profile() {
         <div className="profile_section_header">
           <h2 className="profile_section_title">Mes évennements</h2>
           <button
-            onClick={() => openModal("createEvent")}
+            onClick={() => openModal("createEvent", undefined, fetchEvents)}
             className="profile_action_button secondary"
           >
             Ajouter un évennement

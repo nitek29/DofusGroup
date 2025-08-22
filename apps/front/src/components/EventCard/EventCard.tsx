@@ -19,11 +19,11 @@ export default function EventCard({ event }: EventCardProps) {
       <h2 className="event_card_title">{event.title}</h2>
       <p
         className="event_card_tag"
-        style={{ backgroundColor: event.tag.color }}
+        style={{ backgroundColor: event.tag?.color }}
       >
-        {event.tag.name}
+        {event.tag?.name}
       </p>
-      <p className="event_card_server">{event.server.name}</p>
+      <p className="event_card_server">{event.server?.name}</p>
       <p className="event_card_date">
         {new Date(event.date).toLocaleString("fr-FR", {
           timeZone: "UTC",

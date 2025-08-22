@@ -32,8 +32,7 @@ export const createCharacterSchema: Joi.ObjectSchema = Joi.object({
       "any.only": `Alignment must be either ${ALIGNMENTS.join(", ")}`,
       "string.base": "Alignment must be a string",
     }),
-  stuff: Joi.string().uri().optional().messages({
-    "string.uri": "Stuff must be a valid URL",
+  stuff: Joi.string().optional().messages({
     "string.base": "Stuff must be a string",
   }),
   default_character: Joi.boolean().optional(),
@@ -70,11 +69,10 @@ export const updateCharacterSchema: Joi.ObjectSchema = Joi.object({
     .valid("Brâkmar", "Neutre", "Bonta")
     .optional()
     .messages({
-      "any.only": `Alignment must be either ${ALIGNMENTS.join('", "')}`,
+      "any.only": `Alignment must be either ${ALIGNMENTS.join(", ")}`,
       "string.base": "Alignment must be a string",
     }),
-  stuff: Joi.string().uri().optional().messages({
-    "string.uri": "Stuff must be a valid URL",
+  stuff: Joi.string().optional().messages({
     "string.base": "Stuff must be a string",
   }),
   default_character: Joi.boolean().optional(),

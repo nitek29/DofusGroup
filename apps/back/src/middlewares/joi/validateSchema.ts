@@ -9,14 +9,24 @@ export default function validateSchema(schema: Joi.ObjectSchema) {
       next();
     } catch (error) {
       if (error instanceof Joi.ValidationError) {
-        res.status(status.BAD_REQUEST).json({
+        console.error("Validation error:", error.message);
+        console.error("Validation details:", error.details);
+        console.error("Request body:", req.body);
+        
+        const errorResponse = {
           error: true,
           message: error.message,
           details: error.details.map((detail: Joi.ValidationErrorItem) => ({
             message: detail.message,
+            path: detail.path,
+            value: detail.context?.value,
           })),
-        });
+        };
+        
+        console.error("Error response:", errorResponse);
+        res.status(status.BAD_REQUEST).json(errorResponse);
       } else {
+        console.error("Non-validation error:", error);
         next(error);
       }
     }
