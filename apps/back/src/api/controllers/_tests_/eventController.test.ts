@@ -404,6 +404,31 @@ describe("EventController", () => {
 
       expect(next).toHaveBeenCalledWith(error);
     });
+
+    it("Should call next() when creating event with characters from different server", async () => {
+      req.params = { userId: "182a492c-feb7-4af8-910c-e61dc2536754" };
+      req.body = {
+        title: "Donjon test",
+        date: new Date("2026-01-01"),
+        duration: 60,
+        area: "Amakna",
+        sub_area: "Test area",
+        donjon_name: "Test donjon",
+        max_players: 8,
+        status: "public",
+        tag_id: "f7a34554-d2d7-48d5-8bc2-1f7e4b06c8f8",
+        server_id: "6c19c76b-cbc1-4a58-bdeb-b336eaf6f51c",
+        character_ids: ["char-from-different-server"],
+      };
+      
+      // Simuler une erreur de serveur différent lors de la création
+      const serverError = new Error("Following characters aren't from the same server: CharacterFromOtherServer");
+      mockPost.mockRejectedValue(serverError);
+      
+      await underTest.post(req as Request, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(serverError);
+    });
   });
 
   // --- ADD CHARACTERS TO EVENT ---
@@ -583,6 +608,30 @@ describe("EventController", () => {
       );
 
       expect(next).toHaveBeenCalledWith(error);
+    });
+
+    it("Should call next() when characters are from different server than event", async () => {
+      req.params = {
+        eventId: "923a9fe0-1395-4f4e-8d18-4a9ac183b924",
+      };
+      req.body = {
+        characterIds: [
+          "1db5cd8a-cd22-48e8-9a4e-90ee032c9f15",
+          "44fec4c8-19a6-4aaa-8f6a-16afe92af491",
+        ],
+      };
+      
+      // Simuler une erreur de serveur différent
+      const serverError = new Error("Following characters aren't from the same server: CharacterFromDifferentServer");
+      mockAddCharacters.mockRejectedValue(serverError);
+      
+      await underTest.addCharactersToEvent(
+        req as Request,
+        res as Response,
+        next,
+      );
+
+      expect(next).toHaveBeenCalledWith(serverError);
     });
   });
 

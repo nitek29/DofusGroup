@@ -15,10 +15,23 @@ let mockUseModal: () => any = () => ({
   openModal: vi.fn(),
 });
 
+let mockUseAuth: () => any = () => ({
+  user: null,
+  isAuthenticated: false,
+  logout: vi.fn(),
+  isLoading: false,
+});
+
 vi.mock("../../../contexts/modalContext", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => children,
   useModal: () => mockUseModal(),
+}));
+
+vi.mock("../../../contexts/authContext", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: () => mockUseAuth(),
 }));
 
 import Header from "../Header";
@@ -29,6 +42,12 @@ describe("Header", () => {
   beforeEach(() => {
     openModal = vi.fn();
     mockUseModal = () => ({ openModal });
+    mockUseAuth = () => ({
+      user: null,
+      isAuthenticated: false,
+      logout: vi.fn(),
+      isLoading: false,
+    });
 
     render(
       <MemoryRouter>

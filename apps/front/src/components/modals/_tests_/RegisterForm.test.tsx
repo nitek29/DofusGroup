@@ -1,12 +1,13 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { vi } from "vitest";
 
 import RegisterForm from "../RegisterForm/RegisterForm";
 
 describe("RegisterForm", () => {
   it("Display all form fields and button", () => {
     render(<RegisterForm handleSubmit={vi.fn()} error={null} />);
-    expect(screen.getByLabelText(/Pseudo:/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Username:/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email:/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Mot de passe:$/i)).toBeInTheDocument();
     expect(
@@ -23,7 +24,8 @@ describe("RegisterForm", () => {
   it("Call handleSubmit on form submit", () => {
     const handleSubmit = vi.fn();
     render(<RegisterForm handleSubmit={handleSubmit} error={null} />);
-    fireEvent.submit(screen.getByRole("form"));
+    const form = screen.getByRole("button").closest("form")!;
+    fireEvent.submit(form);
     expect(handleSubmit).toHaveBeenCalled();
   });
 });

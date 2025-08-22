@@ -9,7 +9,6 @@ export type Character = {
   alignment: string;
   stuff: string;
   breed: Breed;
-  breed_id: string;
   server_id: string;
   default_character: boolean;
 };

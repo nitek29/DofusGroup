@@ -48,6 +48,8 @@ const mockEvent = {
       alignment: "Bonta",
       stuff: "https://d-bk.net/fr/d/1EFhw",
       default_character: true,
+      breed: { id: "1", name: "Cra" },
+      server_id: "0508669a-d352-4145-89b4-87b481d44938",
     },
   ],
 };
@@ -101,7 +103,8 @@ describe("EventCard", () => {
     const button = screen.getByRole("button", { name: /détails/i });
     fireEvent.click(button);
     expect(mockNavigate).toHaveBeenCalledWith(
-      "/details/e804f5c2-09af-4aac-ab05-8dc7743fcc2d",
+      "/event",
+      { state: { eventId: "e804f5c2-09af-4aac-ab05-8dc7743fcc2d" } },
     );
   });
 });

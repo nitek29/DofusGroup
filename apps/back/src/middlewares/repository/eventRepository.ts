@@ -102,8 +102,31 @@ export class EventRepository {
 
       // Stage1 - create event
       const event = await EventEntity.create(eventFields);
-      // Stage 2 - Add relations on junction table
-      await event.addCharacters(characters_id);
+      
+      // Stage 2 - Vérifier et ajouter les personnages s'ils existent
+      if (characters_id && characters_id.length > 0) {
+        // Récupérer les personnages
+        let characters: CharacterEntity[] = await CharacterEntity.findAll({
+          where: {
+            id: {
+              [Op.in]: characters_id,
+            },
+          },
+        });
+
+        if (!characters.length) {
+          throw new Error("Characters not found");
+        }
+
+        // Vérifier que les personnages sont du même serveur que l'événement
+        const validCharactersId = this.utils.checkCharactersServer(
+          event,
+          characters,
+        );
+
+        // Ajouter les personnages validés
+        await event.addCharacters(validCharactersId);
+      }
 
       return event;
     } catch (error) {

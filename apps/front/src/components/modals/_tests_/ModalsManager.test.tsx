@@ -20,10 +20,23 @@ let mockUseModal: () => any = () => ({
   openModal: vi.fn(),
 });
 
+let mockUseAuth: () => any = () => ({
+  user: null,
+  isAuthenticated: false,
+  logout: vi.fn(),
+  isLoading: false,
+});
+
 vi.mock("../../../contexts/modalContext", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => children,
   useModal: () => mockUseModal(),
+}));
+
+vi.mock("../../../contexts/authContext", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: () => mockUseAuth(),
 }));
 
 import ModalsManager from "../ModalsManager";
@@ -50,11 +63,18 @@ describe("ModalsManager", () => {
       closeModal,
       openModal: vi.fn(),
     });
+    mockUseAuth = () => ({
+      user: null,
+      isAuthenticated: false,
+      logout: vi.fn(),
+      isLoading: false,
+    });
   });
 
   it("Display RegisterForm When modalType is 'register'", () => {
     renderModalsManager();
-    expect(screen.getByRole("form")).toBeInTheDocument();
+    const form = screen.getByRole("button", { name: "Register" }).closest("form")!;
+    expect(form).toBeInTheDocument();
     expect(screen.getByText(/Inscription/i)).toBeInTheDocument();
   });
 
@@ -65,7 +85,8 @@ describe("ModalsManager", () => {
 
   it("Close modal when you click on the background", () => {
     renderModalsManager();
-    fireEvent.click(screen.getByRole("dialog"));
+    const modal = document.querySelector(".modal")!;
+    fireEvent.click(modal);
     expect(closeModal).toHaveBeenCalled();
   });
 
@@ -78,6 +99,12 @@ describe("ModalsManager", () => {
       handleSubmit: vi.fn(),
       closeModal: vi.fn(),
       openModal: vi.fn(),
+    });
+    mockUseAuth = () => ({
+      user: null,
+      isAuthenticated: false,
+      logout: vi.fn(),
+      isLoading: false,
     });
 
     const { container } = renderModalsManager();
