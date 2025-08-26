@@ -1,6 +1,6 @@
 import request from "supertest";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import express from "express";
+import express, { NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import status from "http-status";
 import jwt from "jsonwebtoken";
@@ -23,6 +23,13 @@ describe("authRouter", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Mock AuthService methods
+    vi.spyOn(service, 'setAuthUserRequest').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      req.userId = userId; // Set the userId for authenticated requests
+      next();
+    });
+    
     app = setup.App<AuthController, [AuthService, DataEncryptionService]>(
       controller,
       createAuthRouter,
@@ -161,4 +168,32 @@ describe("authRouter", () => {
       expect(res.body).toEqual({ called: "next" });
     });
   });
+
+  describe("GET /auth/me", () => {
+    it("Propagate request to authController.getMe", async () => {
+      //GIVEN
+      controller.getMe = setup.mockSucessCall(status.OK);
+      //WHEN
+      const res = await request(app)
+        .get("/auth/me")
+        .set("Cookie", [`token=${token}`]);
+      //THEN
+      expect(controller.getMe).toHaveBeenCalled();
+      expect(res.status).toBe(status.OK);
+      expect(res.body).toBe("Success!");
+    });
+
+    it("Next is called at end route.", async () => {
+      controller.getMe = setup.mockNextCall();
+
+      const res = await request(app)
+        .get("/auth/me")
+        .set("Cookie", [`token=${token}`]);
+
+      expect(controller.getMe).toHaveBeenCalled();
+      expect(res.status).toBe(status.NOT_FOUND);
+      expect(res.body).toEqual({ called: "next" });
+    });
+  });
+
 });

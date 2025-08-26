@@ -5,6 +5,7 @@ import { Character } from "./character.js";
 export type User = {
   id: string;
   username: string;
+  role?: string;
 };
 
 export type UserEnriched = User & {

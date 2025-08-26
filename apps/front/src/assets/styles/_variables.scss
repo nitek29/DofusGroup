@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light dark;
+  --primary-text: #ffffff;
+  --input-text:  #333333;
+  --text-button: #000000;
+  --primary-bg: #1f1b3e;
+  --secondary-bg: #636078;
+  --link-hover-bg: #4b495b;
+  --card-bg: rgba(96, 186, 96, 1);
+  --button-bg: radial-gradient(
+    circle,
+    rgba(96, 186, 96, 1) 0%,
+    rgba(156, 217, 92, 1) 90%
+  );
+  --box-shadow: 5px 5px 2px 1px rgba(0, 0, 0, 0.5);
+  --box-shadow-hover: 0px 0px 0px 0px rgba(0, 0, 0, 0.5);
+  --semi-bold: 600;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --primary-text: #333333;
+    --primary-bg: #bab6a0;
+    --secondary-bg: #e4e4dc;
+    --link-hover-bg: #cfcfc2;
+  }
+}

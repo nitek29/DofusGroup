@@ -3,7 +3,7 @@ import { Router } from "express";
 import validateUUID from "../../middlewares/utils/validateUUID.js";
 import htmlSanitizer from "../../middlewares/utils/htmlSanitizer.js";
 import validateSchema from "../../middlewares/joi/validateSchema.js";
-import { AuthService } from "../../middlewares/utils/authService.js";
+import { AuthService, AuthenticatedRequest } from "../../middlewares/utils/authService.js";
 import { EventController } from "../controllers/eventController.js";
 import {
   createEventSchema,
@@ -32,16 +32,7 @@ export function createEventRouter(
     controller.getOneEnriched(req, res, next);
   });
 
-  router.post(
-    "/user/:userId/event",
-    validateUUID,
-    authService.checkPermission,
-    htmlSanitizer,
-    validateSchema(createEventSchema),
-    (req, res, next) => {
-      controller.post(req, res, next);
-    },
-  );
+  ;
 
   router.post(
     "/event/:eventId/addCharacters",
@@ -61,20 +52,75 @@ export function createEventRouter(
     },
   );
 
+  // Admin-specific event routes
   router
     .route("/user/:userId/event/:eventId")
     .patch(
       validateUUID,
-      authService.checkPermission,
+      authService.setAuthUserRequestWithRole.bind(authService),
+      authService.checkOwnerOrAdmin.bind(authService),
+      htmlSanitizer,
+      validateSchema(updateEventSchema),
+      (req: AuthenticatedRequest, res, next) => {
+        console.log("Admin update event")
+        // Si c'est un admin, utiliser la méthode admin, sinon la méthode normale
+        if (req.userRole === "admin" && req.userId !== req.params.userId) {
+          controller.adminUpdateEvent(req, res, next);
+        } else {
+          controller.update(req, res, next);
+        }
+      },
+    )
+    .delete(
+      validateUUID, 
+      authService.setAuthUserRequestWithRole.bind(authService),
+      authService.checkOwnerOrAdmin.bind(authService),
+      (req: AuthenticatedRequest, res, next) => {
+        // Si c'est un admin, utiliser la méthode admin, sinon la méthode normale
+        if (req.userRole === "admin" && req.userId !== req.params.userId) {
+          controller.adminDeleteEvent(req, res, next);
+        } else {
+          controller.delete(req, res, next);
+        }
+      }
+    );
+
+  router.post(
+    "/user/:userId/event",
+    validateUUID,
+    authService.checkPermission,
+    htmlSanitizer,
+    validateSchema(createEventSchema),
+    (req, res, next) => {
+      controller.post(req, res, next);
+    },
+  )
+
+  router.post(
+    "/events",
+    authService.setAuthUserRequest.bind(authService),
+    htmlSanitizer,
+    validateSchema(createEventSchema),
+    (req, res, next) => {
+      controller.createEvent(req, res, next);
+    },
+  );
+
+  router
+    .route("/event/:eventId")
+    .patch(
+      validateUUID,
+      authService.setAuthUserRequest.bind(authService),
+      authService.checkOwnerOrAdmin.bind(authService),
       htmlSanitizer,
       validateSchema(updateEventSchema),
       (req, res, next) => {
         controller.update(req, res, next);
       },
     )
-    .delete(validateUUID, authService.checkPermission, (req, res, next) => {
+    .delete(validateUUID, authService.setAuthUserRequest.bind(authService), (req, res, next) => {
       controller.delete(req, res, next);
-    });
+      });
 
   return router;
 }

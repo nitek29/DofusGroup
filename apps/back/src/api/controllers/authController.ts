@@ -29,6 +29,8 @@ export class AuthController {
         return;
       }
 
+      req.body.role = "user";
+
       const newUser: AuthUser = await this.repository.register(req.body);
 
       res.status(status.CREATED).json(newUser);
@@ -114,5 +116,31 @@ export class AuthController {
       sameSite: "strict",
     });
     res.json({ message: "Successfully logout" });
+  }
+
+  public async getMe(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      if (!req.userId) {
+        res.status(status.UNAUTHORIZED).json({ message: "Not authenticated" });
+        return;
+      }
+
+      const user = await this.repository.findOneById(req.userId);
+
+      if (!user) {
+        res.status(status.NOT_FOUND).json({ message: "User not found" });
+        return;
+      }
+
+      // Retourner l'utilisateur sans le mot de passe
+      const { password: _password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
   }
 }

@@ -1,10 +1,11 @@
 services:
   front:
     build:
-      context: ./apps/front/app
+      context: ./apps/front
     command: ["npm", "run", "start"]
     volumes:
-      - ./apps/front/app:/app
+      - ./apps/front:/app
+      - /app/node_modules
     ports:
       - "5173:5173"
     depends_on:
@@ -18,6 +19,7 @@ services:
     env_file: .env
     volumes:
       - ./apps/back:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
     environment:
@@ -47,6 +49,7 @@ services:
     build: ./apps/back
     volumes:
       - ./apps/back:/app
+      - /app/node_modules
     depends_on:
       - db
     environment:

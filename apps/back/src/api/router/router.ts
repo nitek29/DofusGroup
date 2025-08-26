@@ -52,7 +52,7 @@ const authService = new AuthService();
 const dataEncryptionService = new DataEncryptionService(new CryptoService());
 
 router.use((req, res, next) => {
-  authService.setAuthUserRequest(req, res, next);
+  authService.setAuthUserRequest.bind(authService)(req, res, next);
 });
 
 router.use(createTagRouter(tagController));

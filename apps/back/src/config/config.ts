@@ -38,5 +38,6 @@ export class Config {
     if (!config.cryptoAlgorithm)
       throw new Error("CRYPTO_ALGORITHM is required");
     if (!config.cryptoKey) throw new Error("CRYPTO_KEY is required");
+    if (!config.jwtSecret) throw new Error("JWT_SECRET is required");
   }
 }

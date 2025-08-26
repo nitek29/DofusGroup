@@ -9,10 +9,10 @@ import express, {
 import status from "http-status";
 import cookieParser from "cookie-parser";
 
-import { AuthService } from "../../../middlewares/utils/authService.js";
+import { AuthenticatedRequest, AuthService } from "../../../middlewares/utils/authService.js";
 
 export let app: Express;
-export let receivedReq: Request | undefined;
+export let receivedReq: Request | AuthenticatedRequest | undefined;
 
 export const setup = {
   App<TController, TArgs extends unknown[]>(

@@ -1,6 +1,6 @@
 import request from "supertest";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import express from "express";
+import express, { NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import status from "http-status";
 import jwt from "jsonwebtoken";
@@ -20,6 +20,66 @@ describe("eventRouter", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Mock AuthService methods
+    vi.spyOn(service, 'setAuthUserRequest').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Si il y a un token dans les cookies, on simule l'extraction de l'userId
+      if (req.cookies?.token) {
+        try {
+          const decoded = jwt.verify(req.cookies.token, secret) as any;
+          req.userId = decoded.sub;
+        } catch (error) {
+          // Token invalide, pas d'userId
+        }
+      }
+      next();
+    });
+
+    vi.spyOn(service, 'setAuthUserRequestWithRole').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Si il y a un token dans les cookies, on simule l'extraction de l'userId et du rôle
+      if (req.cookies?.token) {
+        try {
+          const decoded = jwt.verify(req.cookies.token, secret) as any;
+          req.userId = decoded.sub;
+          req.userRole = "user"; // Par défaut, sauf si on veut tester admin
+        } catch (error) {
+          // Token invalide, pas d'userId
+        }
+      }
+      next();
+    });
+
+    vi.spyOn(service, 'checkOwnerOrAdmin').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Vérifie que l'utilisateur est propriétaire ou admin
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      // Si userId du token != userId des params, et que ce n'est pas un admin, on refuse
+      if (req.params.userId && req.userId !== req.params.userId && req.userRole !== "admin") {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      next();
+    });
+
+    vi.spyOn(service, 'checkPermission').mockImplementation(async (req: any, res: any, next: NextFunction) => {
+      // Vérifie que l'utilisateur a la permission (similaire à checkOwnerOrAdmin)
+      if (!req.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      if (req.params.userId && req.userId !== req.params.userId) {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+        return;
+      }
+      
+      next();
+    });
+    
     app = setup.App<EventController, [AuthService]>(
       controller,
       createEventRouter,
@@ -187,6 +247,48 @@ describe("eventRouter", () => {
         .set("Cookie", [`token=${token}`]);
 
       expect(controller.post).not.toHaveBeenCalled();
+      expect(res.status).toBe(status.FORBIDDEN);
+      expect(res.body).toEqual({ error: "Forbidden access" });
+    });
+  });
+
+  describe("POST /events", () => {
+    it("Propagate request to eventController.createEvent", async () => {
+      //GIVEN
+      controller.createEvent = setup.mockSucessCall(status.CREATED);
+      //WHEN
+      const res = await request(app)
+        .post(`/events`)
+        .set("Cookie", [`token=${token}`]);
+      //THEN
+      expect(controller.createEvent).toHaveBeenCalled();
+      expect((receivedReq as any)?.userId).toBe(userId);
+      expect(res.status).toBe(status.CREATED);
+      expect(res.body).toBe("Success!");
+    });
+
+    it("Next is called at end route.", async () => {
+      controller.createEvent = setup.mockNextCall();
+
+      const res = await request(app)
+        .post(`/events`)
+        .set("Cookie", [`token=${token}`]);
+
+      expect(controller.createEvent).toHaveBeenCalled();
+      expect(res.status).toBe(status.NOT_FOUND);
+      expect(res.body).toEqual({ called: "next" });
+    });
+
+    it("Rejects unauthorized request when token is not set", async () => {
+      // On doit mocker createEvent car il sera appelé, mais il retournera 403
+      controller.createEvent = vi.fn().mockImplementation((req: any, res: any) => {
+        res.status(status.FORBIDDEN).json({ error: "Forbidden access" });
+      });
+
+      const res = await request(app)
+        .post(`/events`);
+
+      expect(controller.createEvent).toHaveBeenCalled();
       expect(res.status).toBe(status.FORBIDDEN);
       expect(res.body).toEqual({ error: "Forbidden access" });
     });

@@ -21,6 +21,7 @@ export default class UserEntity extends Model<
   declare public username: string;
   declare public password: string;
   declare public mail: string;
+  declare public role: string;
 
   declare public events?: Event[];
   declare public comments?: Comment[];
@@ -67,6 +68,11 @@ UserEntity.init(
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+    },
+    role: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "user",
     },
   },
   {
